@@ -58,7 +58,7 @@
             <div class="text-right">
                 <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
                     וייטנאם 2026
-                    <span title="המידע שמור פרטית בדרייב שלך" class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">🛡️ מידע פרטי</span>
+                    <span title="המידע שמור בתיקייה פרטית בדרייב" class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">🛡️ מידע פרטי</span>
                 </h1>
                 <div class="flex items-center gap-2 mt-1 justify-end">
                     <p class="text-xs text-gray-500 flex items-center gap-1">
@@ -157,13 +157,17 @@
 <script type="module">
     // ------------------------------------------------------------------------
     // GOOGLE DRIVE API CONFIGURATION
-    // החלף את הערך כאן ב-Client ID שתייצר ב-Google Cloud Console
     // ------------------------------------------------------------------------
     const CLIENT_ID = "449350453148-rptakuolagf5deu5rn8u9ep1o76lmqj4.apps.googleusercontent.com";
-    // הרשאת drive.file מאפשרת לאפליקציה לגשת *רק* לקבצים שהיא יצרה בעצמה בדרייב.
+    // הרשאת drive.file מאפשרת גישה אך ורק לקבצים ולתיקיות שהאפליקציה יצרה בעצמה!
     const SCOPES = "https://www.googleapis.com/auth/drive.file"; 
     
+    // קבועים עבור התיקייה והקובץ בדרייב
+    const FOLDER_NAME = "Vietnam 2026 Planner";
+    const FILE_NAME = "vietnam_trip_data.json";
+
     let accessToken = null;
+    let driveFolderId = null;
     let driveFileId = null;
 
     // --- Web Crypto API for Secure AES-GCM Encryption (For AI Keys) ---
@@ -307,7 +311,7 @@
                     authBtn.classList.replace('text-blue-700', 'text-red-700');
                     authBtn.onclick = window.logoutGoogle;
                     
-                    // Fetch data from drive
+                    // Fetch data from drive folder
                     await loadFromDrive();
                 }
             },
@@ -343,6 +347,7 @@
 
     window.logoutGoogle = () => {
         accessToken = null;
+        driveFolderId = null;
         driveFileId = null;
         const syncEl = document.getElementById('sync-status');
         syncEl.innerText = '⚠️ מצב מקומי (מנותק מהענן)';
@@ -355,36 +360,54 @@
         authBtn.onclick = window.loginGoogle;
     };
 
-    // --- Google Drive API Logic ---
+    // --- Google Drive API Logic (WITH FOLDER) ---
     async function loadFromDrive() {
         if (!accessToken) return;
         try {
-            document.getElementById('sync-status').innerText = '⏳ מושך נתונים...';
+            document.getElementById('sync-status').innerText = '⏳ מחפש תיקייה...';
             
-            // 1. Search for the file
-            const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='vietnam_trip_data.json' and trashed=false&spaces=drive`, {
+            // 1. Search for the specialized Folder
+            const folderQuery = encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+            const searchFolderRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${folderQuery}&spaces=drive`, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
-            const searchData = await searchRes.json();
+            const folderData = await searchFolderRes.json();
             
-            if (searchData.files && searchData.files.length > 0) {
-                // File exists!
-                driveFileId = searchData.files[0].id;
+            if (folderData.files && folderData.files.length > 0) {
+                // Folder exists!
+                driveFolderId = folderData.files[0].id;
                 
-                // 2. Read the content
-                const readRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+                // 2. Search for the file INSIDE this specific folder
+                document.getElementById('sync-status').innerText = '⏳ מושך נתונים...';
+                const fileQuery = encodeURIComponent(`name='${FILE_NAME}' and '${driveFolderId}' in parents and trashed=false`);
+                const searchFileRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${fileQuery}&spaces=drive`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
-                const d = await readRes.json();
+                const fileData = await searchFileRes.json();
                 
-                window.savedTips = d.tips || {};
-                window.selectedOptions = d.options || {};
-                
-                // Render changes
-                itinerary.forEach((_, i) => { 
-                    renderSavedTips(i); 
-                    if(itinerary[i].options) renderOptions(i); 
-                });
+                if (fileData.files && fileData.files.length > 0) {
+                    // File exists inside the folder!
+                    driveFileId = fileData.files[0].id;
+                    
+                    // 3. Read the content
+                    const readRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    const d = await readRes.json();
+                    
+                    window.savedTips = d.tips || {};
+                    window.selectedOptions = d.options || {};
+                    
+                    // Render changes
+                    itinerary.forEach((_, i) => { 
+                        renderSavedTips(i); 
+                        if(itinerary[i].options) renderOptions(i); 
+                    });
+                }
+            } else {
+                // Folder doesn't exist yet, which means file doesn't exist either. 
+                // We will create them on the first save (syncToCloud).
+                console.log("Folder not found. Will be created on first save.");
             }
             document.getElementById('sync-status').innerText = '☁️ מסונכרן ב-Drive';
         } catch(e) { 
@@ -408,6 +431,18 @@
             document.getElementById('sync-status').innerText = '⏳ שומר ב-Drive...';
             const fileContent = JSON.stringify({ tips: window.savedTips, options: window.selectedOptions });
             
+            // 1. Create the Folder if it doesn't exist yet
+            if (!driveFolderId) {
+                const folderRes = await fetch(`https://www.googleapis.com/drive/v3/files`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+                });
+                const folderData = await folderRes.json();
+                driveFolderId = folderData.id;
+            }
+
+            // 2. Save the file (Update or Create inside the folder)
             if (driveFileId) {
                 // UPDATE existing file content
                 await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
@@ -416,15 +451,20 @@
                     body: fileContent
                 });
             } else {
-                // CREATE new file (Step 1: Create Metadata, Step 2: Upload Content)
+                // CREATE new file inside the specific folder
                 const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: 'vietnam_trip_data.json', mimeType: 'application/json' })
+                    body: JSON.stringify({ 
+                        name: FILE_NAME, 
+                        mimeType: 'application/json',
+                        parents: [driveFolderId] // <--- הכנסת הקובץ ישירות לתיקייה שלנו
+                    })
                 });
                 const metaData = await metaRes.json();
                 driveFileId = metaData.id;
                 
+                // Upload content to the newly created file
                 await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
                     method: 'PATCH',
                     headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
