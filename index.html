@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>וייטנאם 2026 - מאובטח (Google Drive)</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Google Identity Services (GIS) לחיבור מול Google Drive -->
+    <script src="https://accounts.google.com/gsi/client" async defer onload="window.initGIS()"></script>
+    
+    <style>
+        html, body { height: 100%; width: 100%; margin: 0; padding: 0; font-family: 'Assistant', sans-serif; overflow: hidden; background-color: #f8fafc; }
+        #app-container { display: flex; height: 100dvh; width: 100vw; overflow: hidden; flex-direction: row-reverse; }
+        #map-container { flex: 1; height: 100%; position: relative; z-index: 1; }
+        #itinerary-container { width: 450px; height: 100%; background: white; box-shadow: 4px 0 15px rgba(0,0,0,0.05); z-index: 10; display: flex; flex-direction: column; position: relative; min-height: 0; overflow: hidden; }
+        #resizer { background-color: #e2e8f0; display: flex; align-items: center; justify-content: center; z-index: 20; transition: background-color 0.2s; flex-shrink: 0; cursor: col-resize; }
+        #resizer:active { background-color: #94a3b8; }
+        .resizer-line { background: white; border-radius: 2px; }
+        
+        @media (min-width: 769px) { #resizer { width: 12px; flex-direction: column; } .resizer-line { width: 2px; height: 20px; margin: 2px 0; } }
+        @media (max-width: 768px) { #app-container { flex-direction: column; } #map-container { height: 30vh; width: 100%; flex: none; } #resizer { height: 16px; width: 100%; cursor: row-resize; flex-direction: row; } .resizer-line { height: 2px; width: 24px; margin: 0 3px; } #itinerary-container { width: 100%; height: 70vh; flex: none; } }
+        #map { height: 100%; width: 100%; }
+        #timeline-container { flex: 1; overflow-y: auto !important; padding: 1.5rem; min-height: 0; display: block; }
+        
+        .day-card { border-right: 3px solid #e2e8f0; margin-right: 12px; padding-right: 20px; position: relative; padding-bottom: 2.5rem; text-align: right; }
+        .day-card.active { border-right-color: #4f46e5; background-color: #f8fafc; border-radius: 12px 0 0 12px; }
+        .day-dot { position: absolute; right: -10px; top: 0; width: 17px; height: 17px; border-radius: 50%; background: white; border: 3px solid #cbd5e1; }
+        .day-card.active .day-dot { border-color: #4f46e5; background: #4f46e5; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2); }
+        
+        .option-box { border: 1px solid #e2e8f0; padding: 10px; border-radius: 10px; margin-bottom: 8px; cursor: pointer; background: white; display: flex; align-items: flex-start; gap: 10px; transition: all 0.2s; }
+        .option-box.selected { border-color: #4f46e5; background-color: #f5f3ff; border-width: 2px; }
+        .option-box:hover { border-color: #a5b4fc; }
+        
+        #ai-overlay { position: absolute; top: 0; right: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); backdrop-filter: blur(8px); z-index: 50; transform: translateY(100%); opacity: 0; visibility: hidden; transition: all 0.3s ease; display: flex; flex-direction: column; pointer-events: none; }
+        #ai-overlay.open { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; }
+        .custom-div-icon { background-color: #4f46e5; color: white; border-radius: 50%; border: 3px solid white; text-align: center; font-weight: bold; line-height: 24px; cursor: pointer; }
+        
+        .tab-btn { padding: 10px 16px; font-size: 12px; font-weight: bold; border-bottom: 2px solid transparent; color: #64748b; transition: all 0.2s; }
+        .tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; background-color: #f5f3ff; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="map-container"><div id="map"></div></div>
+    <div id="resizer"><div class="resizer-line"></div><div class="resizer-line"></div></div>
+    <div id="itinerary-container">
+        <div class="px-6 py-5 border-b border-gray-100 bg-white shrink-0 flex justify-between items-center z-20 relative">
+            <div class="text-right">
+                <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    וייטנאם 2026
+                    <span title="המידע שמור פרטית בדרייב שלך" class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">🛡️ מידע פרטי</span>
+                </h1>
+                <div class="flex items-center gap-2 mt-1 justify-end">
+                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                        30 במרץ - 11 באפריל • <span id="sync-status" class="text-gray-500 font-bold">⏳ מאתחל...</span>
+                    </p>
+                    <button id="auth-btn" onclick="window.loginGoogle()" class="hidden text-[10px] font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition-colors flex items-center gap-1">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27c3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10c5.35 0 9.25-3.67 9.25-9.09c0-1.15-.15-1.81-.15-1.81Z"/></svg>
+                        התחבר עם Google
+                    </button>
+                </div>
+            </div>
+            <button onclick="window.openApiModal()" class="text-gray-400 hover:text-indigo-600 p-2 transition-colors" title="הגדרות AI הצפנה">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"></path></svg>
+            </button>
+        </div>
+        <div id="timeline-container" class="custom-scroll"></div>
+        <div id="ai-overlay">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-indigo-50 shrink-0">
+                <h3 class="font-bold text-indigo-900 flex items-center gap-2"><span>✨</span> המלצות AI (<span id="active-provider-label">...</span>)</h3>
+                <button onclick="window.closeAIPanel()" class="p-2 hover:bg-white rounded-full text-gray-500 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 text-right" id="ai-content">
+                <div id="ai-loading" class="hidden text-center mt-10">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                    <p class="text-indigo-600 font-medium italic">מפענח מפתחות ומתחבר...</p>
+                </div>
+                <div id="ai-results" class="hidden space-y-4"></div>
+                <div id="ai-error-box" class="hidden mt-6 p-4 bg-black rounded-xl text-green-400 text-[10px] font-mono text-left dir-ltr overflow-auto max-h-60 border border-gray-700 shadow-xl">
+                    <div class="text-red-500 font-bold mb-2">RAW ERROR RESPONSE:</div>
+                    <div id="error-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Settings Multi-Provider -->
+<div id="api-key-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-right">
+        <div class="flex border-b bg-gray-50">
+            <button onclick="switchConfigTab('gemini')" id="tab-gemini" class="tab-btn flex-1 active">Gemini (Google)</button>
+            <button onclick="switchConfigTab('openai')" id="tab-openai" class="tab-btn flex-1">OpenAI (ChatGPT)</button>
+        </div>
+
+        <div class="p-6">
+            <!-- Gemini Section -->
+            <div id="config-gemini">
+                <p class="text-xs text-gray-500 mb-4">המפתח יוצפן בדפדפן באמצעות AES-GCM 256-bit.</p>
+                <input type="password" id="gemini-key-input" placeholder="AIzaSy..." class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none rounded-xl px-4 py-3 text-sm mb-4 font-mono text-left" dir="ltr">
+                <div class="mb-4">
+                    <label class="text-[10px] font-bold text-gray-400 block mb-1">מודל מועדף:</label>
+                    <select id="gemini-model-select" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                        <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (מומלץ)</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (יציב)</option>
+                        <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- OpenAI Section -->
+            <div id="config-openai" class="hidden">
+                <p class="text-xs text-gray-500 mb-4">המפתח יוצפן בדפדפן באמצעות AES-GCM 256-bit.</p>
+                <input type="password" id="openai-key-input" placeholder="sk-..." class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none rounded-xl px-4 py-3 text-sm mb-4 font-mono text-left" dir="ltr">
+                <div class="mb-4">
+                    <label class="text-[10px] font-bold text-gray-400 block mb-1">מודל מועדף:</label>
+                    <select id="openai-model-select" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                        <option value="gpt-4o-mini">GPT-4o Mini (מומלץ למהירות)</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-indigo-50 p-3 rounded-xl mb-4 flex items-center justify-between flex-row-reverse border border-indigo-100">
+                <span class="text-xs font-bold text-indigo-900">ספק פעיל לשימוש:</span>
+                <select id="active-provider-select" class="bg-white border border-indigo-200 rounded-lg px-3 py-1 text-xs font-bold text-indigo-600 outline-none">
+                    <option value="gemini">Gemini</option>
+                    <option value="openai">OpenAI</option>
+                </select>
+            </div>
+
+            <div id="test-key-result" class="hidden mb-4 p-3 rounded-xl text-xs font-bold text-center"></div>
+
+            <div class="flex flex-col gap-2">
+                <button onclick="window.testActiveApiKey()" class="w-full py-2.5 font-bold text-indigo-600 border-2 border-indigo-100 rounded-xl hover:bg-indigo-50 transition-colors">בדוק תקינות לספק הנבחר</button>
+                <div class="flex gap-2">
+                    <button onclick="window.saveAllConfig()" class="flex-1 py-3 font-bold bg-indigo-600 text-white rounded-xl active:scale-95 transition-transform shadow-md">הצפן ושמור</button>
+                    <button onclick="window.closeApiModal()" class="px-6 py-3 font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">סגור</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<script type="module">
+    // ------------------------------------------------------------------------
+    // GOOGLE DRIVE API CONFIGURATION
+    // החלף את הערך כאן ב-Client ID שתייצר ב-Google Cloud Console
+    // ------------------------------------------------------------------------
+    const CLIENT_ID = "449350453148-rptakuolagf5deu5rn8u9ep1o76lmqj4.apps.googleusercontent.com";
+    // הרשאת drive.file מאפשרת לאפליקציה לגשת *רק* לקבצים שהיא יצרה בעצמה בדרייב.
+    const SCOPES = "https://www.googleapis.com/auth/drive.file"; 
+    
+    let accessToken = null;
+    let driveFileId = null;
+
+    // --- Web Crypto API for Secure AES-GCM Encryption (For AI Keys) ---
+    const SECRET_SALT = "Vietnam_Trip_AES_2026_SecureKey_!@#";
+    
+    async function getEncryptionKey() {
+        const enc = new TextEncoder();
+        const keyMaterial = await window.crypto.subtle.digest("SHA-256", enc.encode(SECRET_SALT));
+        return await window.crypto.subtle.importKey("raw", keyMaterial, "AES-GCM", false, ["encrypt", "decrypt"]);
+    }
+
+    async function encryptString(plainText) {
+        if (!plainText) return "";
+        try {
+            const key = await getEncryptionKey();
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const enc = new TextEncoder();
+            const encrypted = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, enc.encode(plainText));
+            
+            const ivB64 = btoa(String.fromCharCode(...iv));
+            const encB64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+            return `ENC_AES_GCM:${ivB64}:${encB64}`;
+        } catch (e) {
+            console.error("Encryption error:", e);
+            return "";
+        }
+    }
+
+    async function decryptString(encryptedPayload) {
+        if (!encryptedPayload) return "";
+        if (!encryptedPayload.startsWith("ENC_AES_GCM:")) return encryptedPayload;
+        
+        try {
+            const parts = encryptedPayload.split(":");
+            const iv = new Uint8Array(atob(parts[1]).split('').map(c => c.charCodeAt(0)));
+            const encData = new Uint8Array(atob(parts[2]).split('').map(c => c.charCodeAt(0)));
+            
+            const key = await getEncryptionKey();
+            const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, encData);
+            const dec = new TextDecoder();
+            return dec.decode(decrypted);
+        } catch (e) {
+            console.error("Decryption failed. Key corrupted?", e);
+            return "";
+        }
+    }
+
+    // --- Data Model ---
+    const itinerary = [
+        { dayNum: 1, date: "30.03", title: "הגעה להאנוי", location: "hanoi", desc: "נחיתה בערב, התארגנות ברובע העתיק.", links: [{t: "מפה", u: "https://www.google.com/maps?q=Hanoi+Old+Quarter"}] },
+        { dayNum: 2, date: "31.03", title: "האנוי ← סאפה", location: "sapa", desc: "נסיעה של 6 שעות ברכב VIP לסאפה.", options: [{id:"A",t:"רכבל פנסיפאן",d:"תצפית מהפסגה",u:"https://sunworld.vn/en/fansipan"},{id:"B",t:"כפר קאט קאט",d:"טיול רגלי קצר",u:"https://www.google.com/maps?q=Cat+Cat+Village+Sapa"},{id:"C",t:"אקשן: אומגה",d:"חבלים ואקשן",u:"https://www.google.com/maps/search/zipline+near+Sapa"}] },
+        { dayNum: 3, date: "01.04", title: "עמק מואונג הואה", location: "sapa", desc: "טרק טרסות האורז הקלאסי: Y Linh Ho ← Lao Chai ← Ta Van.", links: [{t: "Muong Hoa", u: "https://www.google.com/maps?q=Muong+Hoa+Valley"}] },
+        { dayNum: 4, date: "02.04", title: "סאפה - יום טבע נוסף", location: "sapa", desc: "יום לבחירה מתוך שלוש אפשרויות.", options: [{id:"A",t:"O Quy Ho + מפלים",d:"מעבר ההרים הגבוה",u:"https://www.google.com/maps?q=O+Quy+Ho+Pass"},{id:"B",t:"טרק + אמבט צמחים",d:"טרק ב-Giang Ta Chai",u:"https://www.google.com/maps?q=Giang+Ta+Chai"},{id:"C",t:"שוק באק הא",d:"שוק שבטים צבעוני",u:"https://www.google.com/maps?q=Bac+Ha+Market"}] },
+        { dayNum: 5, date: "03.04", title: "סאפה ← נין בין", location: "ninhbinh", desc: "נסיעה דרומה ורכיבה על אופניים בטאם קוק.", stay: "Ninh Binh Retreat", links: [{t: "טאם קוק", u: "https://www.google.com/maps?q=Tam+Coc"}] },
+        { dayNum: 6, date: "04.04", title: "זריחה בנין בין וטיסה", location: "ninhbinh", desc: "תצפית האנג מואה, שייט וטיסת ערב לדנאנג.", links: [{t: "Hang Mua", u: "https://www.google.com/maps?q=Hang+Mua+viewpoint"}] },
+        { dayNum: 7, date: "05.04", title: "הוי אן - עיר וחוף", location: "hoian", desc: "בוקר בחוף An Bang. אחה\"צ בעיר העתיקה.", links: [{t: "Ancient Town", u: "https://www.google.com/maps?q=Hoi+An+Ancient+Town"}] },
+        { dayNum: 8, date: "06.04", title: "איי צ'אם - שנורקלים", location: "hoian", desc: "שייט שנורקלים באי הון לאו.", links: [{t: "Cua Dai Port", u: "https://www.google.com/maps?q=Cua+Dai+Port"}] },
+        { dayNum: 9, date: "07.04", title: "טרק באך מה", location: "bachma", desc: "יום טבע מאתגר בשמורה.", links: [{t: "Bach Ma NP", u: "https://www.bachmapark.com.vn/"}] },
+        { dayNum: 10, date: "08.04", title: "טיסה ← קרוז במפרץ לאן הא", location: "halong", desc: "טיסת בוקר לצפון ויציאה לשייט של 24 שעות במפרץ לאן הא (Lan Ha Bay).", stay: "ספינת קרוז", links: [{t: "Lan Ha Bay", u: "https://www.google.com/maps?q=Lan+Ha+Bay"}] },
+        { dayNum: 11, date: "09.04", title: "סיום קרוז ← האנוי", location: "hanoi", desc: "בוקר במפרץ, ירידה מהספינה בצהריים ונסיעה להאנוי. בערב: סיור אוכל רחוב.", links: [{t: "דונג שואן", u: "https://www.google.com/maps?q=Dong+Xuan+Market"}] },
+        { dayNum: 12, date: "10.04", title: "האנוי - buffer", location: "hanoi", desc: "מנוחה וקניות ברובע העתיק.", links: [] },
+        { dayNum: 13, date: "11.04", title: "טיסה הביתה", location: "hanoi", desc: "טיסה ב-11:00.", links: [] }
+    ];
+
+    const locationsCoords = { 
+        hanoi:[21.0285,105.8542], 
+        sapa:[22.3333,103.8333], 
+        ninhbinh:[20.2539,105.9750], 
+        hoian:[15.8801,108.3380], 
+        danang:[16.0544,108.2022], 
+        bachma:[16.1969,107.8542], 
+        halong:[20.7915,107.0543] 
+    };
+
+    // --- State ---
+    window.savedTips = {}; window.selectedOptions = {};
+
+    // --- Config Logic ---
+    window.switchConfigTab = (tab) => {
+        document.getElementById('config-gemini').classList.toggle('hidden', tab !== 'gemini');
+        document.getElementById('config-openai').classList.toggle('hidden', tab !== 'openai');
+        document.getElementById('tab-gemini').classList.toggle('active', tab === 'gemini');
+        document.getElementById('tab-openai').classList.toggle('active', tab === 'openai');
+    };
+
+    window.saveAllConfig = async () => {
+        const rawGemKey = document.getElementById('gemini-key-input').value.trim();
+        const rawOaiKey = document.getElementById('openai-key-input').value.trim();
+        
+        const encGemKey = await encryptString(rawGemKey);
+        const encOaiKey = await encryptString(rawOaiKey);
+
+        const configs = {
+            gemKeyEncrypted: encGemKey,
+            gemMod: document.getElementById('gemini-model-select').value,
+            oaiKeyEncrypted: encOaiKey,
+            oaiMod: document.getElementById('openai-model-select').value,
+            activeProvider: document.getElementById('active-provider-select').value
+        };
+        localStorage.setItem('vtn_crypto_config_v9', JSON.stringify(configs));
+        window.closeApiModal();
+    };
+
+    window.loadConfigToUI = async () => {
+        const d = JSON.parse(localStorage.getItem('vtn_crypto_config_v9') || "{}");
+        if(d.gemKeyEncrypted) document.getElementById('gemini-key-input').value = await decryptString(d.gemKeyEncrypted);
+        if(d.oaiKeyEncrypted) document.getElementById('openai-key-input').value = await decryptString(d.oaiKeyEncrypted);
+        if(d.gemMod) document.getElementById('gemini-model-select').value = d.gemMod;
+        if(d.oaiMod) document.getElementById('openai-model-select').value = d.oaiMod;
+        if(d.activeProvider) document.getElementById('active-provider-select').value = d.activeProvider;
+    };
+
+    window.getDecryptedConfig = async () => {
+        const d = JSON.parse(localStorage.getItem('vtn_crypto_config_v9') || "{}");
+        return {
+            gemKey: await decryptString(d.gemKeyEncrypted),
+            oaiKey: await decryptString(d.oaiKeyEncrypted),
+            gemMod: d.gemMod || "gemini-1.5-flash-latest",
+            oaiMod: d.oaiMod || "gpt-4o-mini",
+            activeProvider: d.activeProvider || "gemini"
+        };
+    };
+
+    // --- Google Drive Init & Auth ---
+    window.initGIS = () => {
+        window.tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: async (tokenResponse) => {
+                if (tokenResponse && tokenResponse.access_token) {
+                    accessToken = tokenResponse.access_token;
+                    
+                    // UI Update for login
+                    const syncEl = document.getElementById('sync-status');
+                    syncEl.innerText = '☁️ מחובר ל-Drive';
+                    syncEl.className = 'text-green-600 font-bold';
+                    
+                    const authBtn = document.getElementById('auth-btn');
+                    authBtn.innerHTML = 'התנתק מהענן';
+                    authBtn.classList.replace('bg-blue-100', 'bg-red-100');
+                    authBtn.classList.replace('text-blue-700', 'text-red-700');
+                    authBtn.onclick = window.logoutGoogle;
+                    
+                    // Fetch data from drive
+                    await loadFromDrive();
+                }
+            },
+        });
+        
+        // Initial setup
+        const syncEl = document.getElementById('sync-status');
+        const authBtn = document.getElementById('auth-btn');
+        
+        if (CLIENT_ID === "YOUR_GOOGLE_CLIENT_ID_HERE") {
+             syncEl.innerText = '⚠️ מצב מקומי (Drive לא מוגדר)';
+             syncEl.className = 'text-gray-500 font-bold';
+             syncEl.title = 'עדכן את CLIENT_ID בקוד כדי לאפשר גיבוי ב-Google Drive';
+        } else {
+             syncEl.innerText = '⏳ מוכן להתחברות...';
+             authBtn.classList.remove('hidden');
+        }
+        
+        // Load local fallback data immediately so app doesn't look empty
+        const localData = JSON.parse(localStorage.getItem('vtn_local_tripData') || "{}");
+        window.savedTips = localData.tips || {};
+        window.selectedOptions = localData.options || {};
+        itinerary.forEach((_, i) => { renderSavedTips(i); if(itinerary[i].options) renderOptions(i); });
+    };
+
+    window.loginGoogle = () => {
+        if (!CLIENT_ID || CLIENT_ID === "YOUR_GOOGLE_CLIENT_ID_HERE") {
+            alert("לא הוגדר מפתח התחברות לגוגל (CLIENT_ID) בקוד.\nהאפליקציה תמשיך לשמור את הנתונים על המכשיר המקומי בלבד.");
+            return;
+        }
+        window.tokenClient.requestAccessToken();
+    };
+
+    window.logoutGoogle = () => {
+        accessToken = null;
+        driveFileId = null;
+        const syncEl = document.getElementById('sync-status');
+        syncEl.innerText = '⚠️ מצב מקומי (מנותק מהענן)';
+        syncEl.className = 'text-gray-500 font-bold';
+        
+        const authBtn = document.getElementById('auth-btn');
+        authBtn.innerHTML = `<svg class="w-3 h-3" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27c3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10c5.35 0 9.25-3.67 9.25-9.09c0-1.15-.15-1.81-.15-1.81Z"/></svg> התחבר עם Google`;
+        authBtn.classList.replace('bg-red-100', 'bg-blue-100');
+        authBtn.classList.replace('text-red-700', 'text-blue-700');
+        authBtn.onclick = window.loginGoogle;
+    };
+
+    // --- Google Drive API Logic ---
+    async function loadFromDrive() {
+        if (!accessToken) return;
+        try {
+            document.getElementById('sync-status').innerText = '⏳ מושך נתונים...';
+            
+            // 1. Search for the file
+            const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='vietnam_trip_data.json' and trashed=false&spaces=drive`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const searchData = await searchRes.json();
+            
+            if (searchData.files && searchData.files.length > 0) {
+                // File exists!
+                driveFileId = searchData.files[0].id;
+                
+                // 2. Read the content
+                const readRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const d = await readRes.json();
+                
+                window.savedTips = d.tips || {};
+                window.selectedOptions = d.options || {};
+                
+                // Render changes
+                itinerary.forEach((_, i) => { 
+                    renderSavedTips(i); 
+                    if(itinerary[i].options) renderOptions(i); 
+                });
+            }
+            document.getElementById('sync-status').innerText = '☁️ מסונכרן ב-Drive';
+        } catch(e) { 
+            console.error("Load from Drive failed:", e); 
+            document.getElementById('sync-status').innerText = '⚠️ שגיאת קריאה מהענן'; 
+        }
+    }
+
+    async function syncToCloud() {
+        // Fallback to local storage if not logged in to Drive
+        if (!accessToken) {
+            localStorage.setItem('vtn_local_tripData', JSON.stringify({ tips: window.savedTips, options: window.selectedOptions }));
+            const syncStatusEl = document.getElementById('sync-status');
+            if(syncStatusEl && CLIENT_ID !== "YOUR_GOOGLE_CLIENT_ID_HERE") {
+                syncStatusEl.innerText = '💾 נשמר מקומית';
+            }
+            return;
+        }
+
+        try {
+            document.getElementById('sync-status').innerText = '⏳ שומר ב-Drive...';
+            const fileContent = JSON.stringify({ tips: window.savedTips, options: window.selectedOptions });
+            
+            if (driveFileId) {
+                // UPDATE existing file content
+                await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: fileContent
+                });
+            } else {
+                // CREATE new file (Step 1: Create Metadata, Step 2: Upload Content)
+                const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: 'vietnam_trip_data.json', mimeType: 'application/json' })
+                });
+                const metaData = await metaRes.json();
+                driveFileId = metaData.id;
+                
+                await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: fileContent
+                });
+            }
+            
+            document.getElementById('sync-status').innerText = '☁️ נשמר ב-Drive';
+        } catch(e) { 
+            console.error("Save to Drive failed:", e); 
+            document.getElementById('sync-status').innerText = '⚠️ שגיאת שמירה'; 
+        }
+    }
+
+    // --- AI API ---
+    window.testActiveApiKey = async () => {
+        const prov = document.getElementById('active-provider-select').value;
+        const key = document.getElementById(prov + '-key-input').value.trim();
+        const mod = document.getElementById(prov + '-model-select').value;
+        const resBox = document.getElementById('test-key-result');
+        
+        resBox.className = "mb-4 p-3 rounded-xl text-xs font-bold text-center bg-gray-100";
+        resBox.innerText = `בודק מול ${prov}...`; resBox.classList.remove('hidden');
+
+        try {
+            let res, d;
+            if(prov==='gemini'){
+                res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${key}`, { method:'POST', body: JSON.stringify({ contents: [{ parts: [{ text: "hi" }] }] }) });
+            } else {
+                res = await fetch(`https://api.openai.com/v1/chat/completions`, { method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({ model:mod, messages:[{role:"user",content:"hi"}], max_tokens:5 }) });
+            }
+            d = await res.json();
+            if(res.ok) { resBox.innerText = "המפתח תקין!"; resBox.classList.replace('bg-gray-100','bg-green-100'); }
+            else throw new Error(d.error?.message || "שגיאה מהשרת");
+        } catch(e) { resBox.innerText = e.message; resBox.classList.replace('bg-gray-100','bg-red-100'); }
+    };
+
+    window.openAIGuide = async (dayIdx) => {
+        const c = await window.getDecryptedConfig();
+        const prov = c.activeProvider;
+        const key = prov === 'gemini' ? c.gemKey : c.oaiKey;
+        const mod = prov === 'gemini' ? c.gemMod : c.oaiMod;
+        
+        if(!key) { window.openApiModal(); return; }
+
+        window.currentAIDayIndex = dayIdx;
+        const day = itinerary[dayIdx];
+        document.getElementById('active-provider-label').innerText = prov.toUpperCase();
+        document.getElementById('ai-overlay').classList.add('open');
+        document.getElementById('ai-loading').classList.remove('hidden');
+        document.getElementById('ai-results').classList.add('hidden');
+        document.getElementById('ai-error-box').classList.add('hidden');
+
+        const optStr = window.selectedOptions[dayIdx] ? `Selected Option: ${window.selectedOptions[dayIdx]}` : "";
+        const prompt = `Travel Vietnam 2026. Day: ${day.title}. Context: ${day.desc}. ${optStr}. Suggest 2 hidden gems in Hebrew. JSON format ONLY: {tips:[{title,emoji,text,url}]}. URLs must be full Google Maps.`;
+
+        try {
+            let res, d;
+            if(prov==='gemini'){
+                res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${key}`, { method:'POST', body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: "Hebrew JSON only." }] }, generationConfig: { responseMimeType: "application/json" } }) });
+            } else {
+                res = await fetch(`https://api.openai.com/v1/chat/completions`, { method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({ model:mod, messages:[{role:"system",content:"Expert Guide. Hebrew JSON ONLY."}, {role:"user",content:prompt}], response_format:{type:"json_object"} }) });
+            }
+            d = await res.json();
+            if(!res.ok) { document.getElementById('error-content').innerText = JSON.stringify(d, null, 2); document.getElementById('ai-error-box').classList.remove('hidden'); document.getElementById('ai-loading').classList.add('hidden'); return; }
+            
+            const raw = prov === 'gemini' ? d.candidates[0].content.parts[0].text : d.choices[0].message.content;
+            const result = JSON.parse(raw);
+            window.currentAITips = result.tips;
+            
+            document.getElementById('ai-results').innerHTML = `<h4 class="font-bold text-lg mb-4">טיפים ל${day.location}</h4>` + result.tips.map((t, i) => `
+                <div class="bg-white p-4 rounded-xl border mb-3 shadow-sm text-right">
+                    <div class="flex flex-row-reverse gap-3">
+                        <div class="text-2xl">${t.emoji}</div>
+                        <div class="flex-1">
+                            <h5 class="font-bold text-sm mb-1">${t.title}</h5>
+                            <p class="text-xs text-gray-600 mb-3">${t.text}</p>
+                            <div class="flex flex-row-reverse justify-between items-center">
+                                <a href="${t.url}" target="_blank" class="text-indigo-600 text-[10px] font-bold">מפה</a>
+                                <button onclick="window.saveTip(${i}, this)" class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-bold hover:bg-indigo-100 transition-colors">⭐ שמור</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`).join('');
+            document.getElementById('ai-loading').classList.add('hidden');
+            document.getElementById('ai-results').classList.remove('hidden');
+        } catch(e) { document.getElementById('error-content').innerText = e.message; document.getElementById('ai-error-box').classList.remove('hidden'); document.getElementById('ai-loading').classList.add('hidden'); }
+    };
+
+    // --- UI/Map Implementation ---
+    const map = L.map('map', { zoomControl: false }).setView([16.5, 107.5], 6);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }).addTo(map);
+    
+    L.polyline([[21,105],[22,103],[21,105],[20,105],[15,108],[16,107],[15,108],[20.79,107.05],[21.02,105.85]], { color: '#4f46e5', weight: 3, opacity: 0.3, dashArray: '6, 8' }).addTo(map);
+
+    Object.keys(locationsCoords).forEach((k, i) => {
+        L.marker(locationsCoords[k], { icon: L.divIcon({ className: 'custom-div-icon', html: `<div>${i+1}</div>`, iconSize:[30,30] }) }).addTo(map).on('click', () => {
+            const idx = itinerary.findIndex(d => d.location === k);
+            if(idx !== -1) {
+                document.getElementById(`day-card-${idx}`).scrollIntoView({ behavior: 'smooth' });
+                window.closeAIPanel();
+            }
+        });
+    });
+
+    const container = document.getElementById('timeline-container');
+    itinerary.forEach((day, idx) => {
+        const card = document.createElement('div');
+        card.className = 'day-card'; card.id = `day-card-${idx}`;
+        card.innerHTML = `
+            <div class="day-dot"></div>
+            <div class="text-[10px] font-bold text-indigo-600 mb-1">יום ${day.dayNum} • ${day.date}</div>
+            <h3 class="text-md font-bold text-gray-900 mb-1">${day.title}</h3>
+            <p class="text-xs text-gray-500 mb-3 leading-relaxed">${day.desc}</p>
+            <div id="options-area-${idx}" class="mb-4"></div>
+            ${day.stay ? `<div class="bg-orange-50 p-2 rounded text-[10px] my-2 border">🏨 ${day.stay}</div>` : ''}
+            <div class="flex flex-wrap gap-2 my-2">${(day.links || []).map(l => `<a href="${l.u}" target="_blank" class="px-2 py-1 bg-white border rounded-full text-[9px] font-bold shadow-sm hover:bg-gray-50 transition-colors">${l.t}</a>`).join('')}</div>
+            <div id="saved-tips-area-${idx}"></div>
+            <button onclick="window.openAIGuide(${idx})" class="text-xs font-bold text-indigo-600 py-2 hover:text-indigo-800 transition-colors">✨ טיפים מה-AI</button>
+        `;
+        container.appendChild(card);
+        if(day.options) renderOptions(idx);
+    });
+
+    function renderOptions(dayIdx) {
+        const area = document.getElementById(`options-area-${dayIdx}`);
+        const day = itinerary[dayIdx];
+        if(!area || !day.options) return;
+        area.innerHTML = `<p class="text-[9px] font-bold text-gray-400 mb-2">בחר אפשרות:</p>` + day.options.map(o => `
+            <div onclick="window.selectOption(${dayIdx}, '${o.id}')" class="option-box ${window.selectedOptions[dayIdx] === o.id ? 'selected' : ''}">
+                <div class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0 border-gray-300 ${window.selectedOptions[dayIdx] === o.id ? 'border-indigo-600' : ''}">${window.selectedOptions[dayIdx] === o.id ? '<div class="w-2 h-2 bg-indigo-600 rounded-full"></div>' : ''}</div>
+                <div class="flex-1 text-right"><span class="font-bold text-xs">${o.id}. ${o.t}</span><p class="text-[10px] text-gray-400 leading-tight">${o.d}</p></div>
+                ${o.u ? `<a href="${o.u}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-400 p-1 hover:text-indigo-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>` : ''}
+            </div>`).join('');
+    }
+
+    window.selectOption = (idx, id) => {
+        window.selectedOptions[idx] = id;
+        renderOptions(idx); 
+        syncToCloud();      
+    };
+
+    window.saveTip = (i, btn) => {
+        const tip = window.currentAITips[i];
+        if(!window.savedTips[window.currentAIDayIndex]) window.savedTips[window.currentAIDayIndex] = [];
+        window.savedTips[window.currentAIDayIndex].push(tip);
+        renderSavedTips(window.currentAIDayIndex);
+        syncToCloud();
+        btn.innerText = "✅ נשמר";
+    };
+
+    function renderSavedTips(idx) {
+        const area = document.getElementById(`saved-tips-area-${idx}`);
+        const tips = window.savedTips[idx] || [];
+        area.innerHTML = tips.map(t => `<div class="bg-indigo-50 border p-2 rounded mt-1 flex flex-row-reverse justify-between items-center text-[9px]"><span class="font-bold">${t.emoji} ${t.title}</span><a href="${t.url}" target="_blank" class="text-indigo-600 font-bold underline">מפה</a></div>`).join('');
+    }
+
+    // --- Modal Logic ---
+    window.openApiModal = async () => { document.getElementById('api-key-modal').classList.remove('hidden'); await window.loadConfigToUI(); };
+    window.closeApiModal = () => document.getElementById('api-key-modal').classList.add('hidden');
+    window.closeAIPanel = () => document.getElementById('ai-overlay').classList.remove('open');
+
+    // --- Resizer ---
+    let rsz = false;
+    document.getElementById('resizer').addEventListener('mousedown', () => rsz = true);
+    document.addEventListener('mouseup', () => rsz = false);
+    document.addEventListener('mousemove', (e) => {
+        if(!rsz) return;
+        if(window.innerWidth > 768) document.getElementById('itinerary-container').style.width = (window.innerWidth - e.clientX) + 'px';
+        else document.getElementById('map-container').style.height = e.clientY + 'px';
+        map.invalidateSize();
+    });
+</script>
+</body>
+</html>
