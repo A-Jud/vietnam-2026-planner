@@ -227,10 +227,13 @@
             <div id="config-prompts" class="hidden">
                 <p class="text-[11px] text-gray-500 mb-3 leading-relaxed">
                     הגדר את ההנחיות שישלחו ל-AI. המערכת תחליף אוטומטית את התגיות הבאות: <br>
-                    <code class="bg-gray-100 text-pink-600 px-1 rounded font-bold">&lt;יעד&gt;</code> , 
-                    <code class="bg-gray-100 text-pink-600 px-1 rounded font-bold">&lt;מוצא&gt;</code> , 
-                    <code class="bg-gray-100 text-pink-600 px-1 rounded font-bold">&lt;תאריך&gt;</code> , 
-                    <code class="bg-gray-100 text-pink-600 px-1 rounded font-bold">&lt;תיאור&gt;</code>.
+                    <span class="font-bold text-gray-700">פרמטר חובה:</span> 
+                    <code class="bg-gray-100 text-pink-600 px-1 rounded font-bold">&lt;שם_באנגלית&gt;</code> <span class="text-gray-400">(נלקח מנתוני היעד)</span><br>
+                    <span class="font-bold text-gray-700">פרמטרי רשות:</span> 
+                    <code class="bg-gray-100 text-blue-600 px-1 rounded font-bold">&lt;יעד&gt;</code> , 
+                    <code class="bg-gray-100 text-blue-600 px-1 rounded font-bold">&lt;מוצא&gt;</code> , 
+                    <code class="bg-gray-100 text-blue-600 px-1 rounded font-bold">&lt;תאריך&gt;</code> , 
+                    <code class="bg-gray-100 text-blue-600 px-1 rounded font-bold">&lt;תיאור&gt;</code>.
                     <br><span class="text-red-500 font-bold mt-1 block">⚠️ חובה להשאיר את המבנה של ה-JSON בסוף כולל השדות באנגלית כדי שהמפה תעבוד!</span>
                 </p>
                 
@@ -292,9 +295,9 @@
     const FOLDER_NAME = "Vietnam 2026 Planner";
     const FILE_NAME = "vietnam_trip_data.json";
 
-    // פרומפטים ברירת מחדל מעודכנים עם בקשה מפורשת לשם באנגלית
-    const defaultTipsPrompt = "Travel Vietnam 2026.\nDate: <תאריך>\nDestination: <יעד>\nContext: <תיאור>\nSuggest 2 hidden gems in Hebrew. JSON format ONLY: {\"tips\":[{\"title\":\"Hebrew name\",\"en_title\":\"English Name (Crucial for Maps)\",\"emoji\":\"🚀\",\"text\":\"desc\",\"url\":\"map link\"}]}. URLs must be full Google Maps.";
-    const defaultOptionsPrompt = "Travel Vietnam 2026.\nDate: <תאריך>\nDestination: <יעד>\nContext: <תיאור>\nGenerate exactly 3 different daily activity options/itineraries for this day in Hebrew. Include real places. JSON format ONLY: {\"options\":[{\"t\":\"Hebrew title\",\"en_t\":\"English title (Crucial for Maps)\",\"d\":\"short description\",\"u\":\"google maps url\"}]}.";
+    // פרומפטים ברירת מחדל מעודכנים עם בקשה מפורשת לשם באנגלית והפרדה בין חובה לרשות
+    const defaultTipsPrompt = "Travel Vietnam 2026.\nDestination (English): <שם_באנגלית>\n[Optional] Destination (Hebrew): <יעד>\n[Optional] Date: <תאריך>\n[Optional] Context: <תיאור>\nSuggest 2 hidden gems in Hebrew. JSON format ONLY: {\"tips\":[{\"title\":\"Hebrew name\",\"en_title\":\"English Name (Crucial for Maps)\",\"emoji\":\"🚀\",\"text\":\"desc\",\"url\":\"map link\"}]}. URLs must be full Google Maps.";
+    const defaultOptionsPrompt = "Travel Vietnam 2026.\nDestination (English): <שם_באנגלית>\n[Optional] Destination (Hebrew): <יעד>\n[Optional] Date: <תאריך>\n[Optional] Context: <תיאור>\nGenerate exactly 3 different daily activity options/itineraries for this day in Hebrew. Include real places. JSON format ONLY: {\"options\":[{\"t\":\"Hebrew title\",\"en_t\":\"English title (Crucial for Maps)\",\"d\":\"short description\",\"u\":\"google maps url\"}]}.";
 
     let accessToken = null;
     let driveFolderId = null;
@@ -502,8 +505,21 @@
         outBox.select();
     };
 
+    // חילוץ תקין וממפה של השם באנגלית
+    const getEnglishLoc = (locCode) => {
+        const mapping = {
+            'hanoi': 'Hanoi',
+            'sapa': 'Sapa',
+            'ninhbinh': 'Ninh Binh',
+            'hoian': 'Hoi An',
+            'danang': 'Da Nang',
+            'bachma': 'Bach Ma National Park',
+            'halong': 'Lan Ha Bay / Ha Long Bay'
+        };
+        return mapping[locCode] || locCode || "";
+    };
+
     // --- Data Model ---
-    // הוספתי en_t לרוב האפשרויות המובנות כדי שיעבדו מושלם עם הניווט
     const itinerary = [
         { dayNum: 1, date: "30.03", title: "הגעה להאנוי", location: "hanoi", desc: "נחיתה בערב, התארגנות ברובע העתיק.", links: [{t: "מפה", u: "https://www.google.com/maps?q=Hanoi+Old+Quarter"}] },
         { dayNum: 2, date: "31.03", title: "האנוי ← סאפה", location: "sapa", desc: "נסיעה של 6 שעות ברכב VIP לסאפה.", options: [{id:"A",t:"רכבל פנסיפאן",en_t:"Fansipan Cable Car",d:"תצפית מהפסגה",u:"https://sunworld.vn/en/fansipan"},{id:"B",t:"כפר קאט קאט",en_t:"Cat Cat Village",d:"טיול רגלי קצר",u:"https://www.google.com/maps?q=Cat+Cat+Village+Sapa"},{id:"C",t:"אקשן: אומגה",d:"חבלים ואקשן",u:"https://www.google.com/maps/search/zipline+near+Sapa"}] },
@@ -868,7 +884,11 @@
 
         let rawPromptTemplate = isOptionsMode ? c.promptOptions : c.promptTips;
         
+        let enLoc = getEnglishLoc(day.location);
+
         let prompt = rawPromptTemplate
+            .replace(/<שם_באנגלית>/g, enLoc)
+            .replace(/<English name>/g, enLoc) 
             .replace(/<יעד>/g, dest || day.title)
             .replace(/<מוצא>/g, origin || "")
             .replace(/<תאריך>/g, day.date || "")
