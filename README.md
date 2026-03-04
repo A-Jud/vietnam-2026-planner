@@ -1,6 +1,8 @@
 # vietnam-2026-planner
 nitty app for my trip that you can use too
 https://a-jud.github.io/vietnam-2026-planner/
+
+
 🇻🇳 וייטנאם 2026 - AI Travel Planner
 
 ברוכים הבאים לאפליקציית "וייטנאם 2026 - Planner V2"!
