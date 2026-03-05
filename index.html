@@ -29,7 +29,8 @@
             #itinerary-container { width: 100%; height: 70vh; flex: none; min-width: 0; } 
         }
         #map { height: 100%; width: 100%; }
-        #timeline-container { flex: 1; overflow-y: auto !important; padding: 1.5rem; min-height: 0; display: block; }
+        #itinerary-scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; position: relative; display: flex; flex-direction: column; }
+        #timeline-container { padding: 1.5rem; display: block; flex: 1; }
         
         .day-card { border-right: 3px solid #e2e8f0; margin-right: 12px; padding-right: 20px; position: relative; padding-bottom: 0.5rem; text-align: right; transition: all 0.3s; }
         .day-card:hover { border-right-color: #a5b4fc; }
@@ -74,41 +75,47 @@
     <div id="resizer"><div class="resizer-line"></div><div class="resizer-line"></div></div>
     
     <div id="itinerary-container">
-        <div class="px-5 py-4 border-b border-gray-100 bg-white shrink-0 z-20 relative flex flex-col gap-3">
-            <div class="flex justify-between items-center">
-                <div class="text-right flex-1">
-                    <h1 class="text-2xl font-black text-gray-900 flex items-center gap-2">
+        <div id="itinerary-scroll-area">
+            
+            <!-- HEADER -->
+            <div class="px-5 py-3 border-b border-gray-100 bg-white shrink-0 z-20 relative flex flex-col gap-2.5">
+                <!-- Row 1 -->
+                <div class="flex justify-between items-center">
+                    <h1 class="text-xl md:text-2xl font-black text-gray-900 flex items-center gap-2">
                         מתכנן הטיולים שלי
-                        <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">Smart Planner</span>
+                        <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold hidden sm:inline-block">Smart Planner</span>
                     </h1>
-                    <div class="flex items-center gap-3 mt-1.5">
-                        <div class="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-lg border border-gray-200">
-                            <span class="text-xs font-bold text-gray-600">תאריך התחלה:</span>
-                            <input type="date" id="global-start-date" onchange="window.updateStartDate(this.value)" class="text-xs font-bold text-indigo-700 bg-transparent outline-none cursor-pointer">
-                        </div>
-                        <span id="sync-status" class="text-xs text-gray-500 font-bold">⏳ מאתחל...</span>
-                    </div>
+                    <span id="sync-status" class="text-xs text-gray-500 font-bold whitespace-nowrap">⏳ מאתחל...</span>
                 </div>
-                <div class="flex flex-col items-end gap-2">
-                    <div class="flex gap-2">
+                
+                <!-- Row 2 -->
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                    <div class="flex items-center gap-1.5 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200">
+                        <span class="text-[11px] font-bold text-gray-600 hidden sm:inline">תאריך התחלה:</span>
+                        <input type="date" id="global-start-date" onchange="window.updateStartDate(this.value)" class="text-xs font-bold text-indigo-700 bg-transparent outline-none cursor-pointer">
+                    </div>
+                    
+                    <div class="flex gap-1.5 items-center flex-wrap">
                         <button onclick="window.exportPlan()" class="text-xs font-bold bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-full hover:bg-green-100 transition-colors shadow-sm flex items-center gap-1">
-                            📥 ייצוא
+                            📥 <span class="hidden sm:inline">ייצוא</span>
                         </button>
                         <button onclick="window.openMultiDayPlannerModal()" class="text-xs font-bold bg-indigo-600 text-white px-3 py-1.5 rounded-full hover:bg-indigo-700 transition-colors shadow-md flex items-center gap-1">
-                            🤖 בניית מסלול AI
+                            🤖 AI <span class="hidden sm:inline">מסלול</span>
                         </button>
-                        <button onclick="window.openApiModal()" class="text-gray-400 hover:text-indigo-600 p-1.5 transition-colors bg-gray-50 rounded-full border border-gray-200" title="הגדרות ואדמיניסטרציה">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"></path></svg>
+                        <button id="auth-btn" onclick="window.loginGoogle()" class="hidden text-[10px] font-bold bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full border border-blue-200 hover:bg-blue-200 transition-colors flex items-center gap-1">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27c3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10c5.35 0 9.25-3.67 9.25-9.09c0-1.15-.15-1.81-.15-1.81Z"/></svg>
+                            <span class="hidden sm:inline">גיבוי בענן</span>
+                        </button>
+                        <button onclick="window.openApiModal()" class="text-gray-500 hover:text-indigo-600 p-1.5 transition-colors bg-gray-100 rounded-full border border-gray-200" title="הגדרות ואדמיניסטרציה">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"></path></svg>
                         </button>
                     </div>
-                    <button id="auth-btn" onclick="window.loginGoogle()" class="hidden text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded border border-blue-200 hover:bg-blue-200 transition-colors flex items-center gap-1">
-                        <svg class="w-3 h-3" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27c3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10c5.35 0 9.25-3.67 9.25-9.09c0-1.15-.15-1.81-.15-1.81Z"/></svg> גיבוי בענן
-                    </button>
                 </div>
             </div>
+            
+            <!-- TIMELINE -->
+            <div id="timeline-container" class="custom-scroll pb-20"></div>
         </div>
-        
-        <div id="timeline-container" class="custom-scroll pb-20"></div>
         
         <div id="ai-overlay">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-indigo-50 shrink-0">
@@ -169,6 +176,11 @@
             <label class="text-[10px] font-bold text-gray-500">תיאור ולו"ז</label>
             <textarea id="edit-day-desc" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none resize-none h-24 leading-relaxed"></textarea>
         </div>
+        <div class="mb-5 bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <label class="text-[11px] font-bold text-gray-700 block mb-2">📍 יעדים מרכזיים ביום זה</label>
+            <div id="edit-day-links-list" class="flex flex-col gap-2 mb-3 max-h-32 overflow-y-auto custom-scroll pr-1"></div>
+            <button type="button" onclick="window.addDayLinkRow()" class="py-1.5 px-3 text-[10px] font-bold text-indigo-600 bg-indigo-100 rounded-lg hover:bg-indigo-200 transition-colors border border-indigo-200 shadow-sm">+ הוסף מיקום</button>
+        </div>
         <div class="mb-5">
             <label class="text-[10px] font-bold text-gray-500 block mb-1">לינה / מלון (אופציונלי)</label>
             <input type="text" id="edit-day-stay" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none">
@@ -181,22 +193,6 @@
             <button onclick="window.closeEditDayModal()" class="px-5 py-3 font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">ביטול</button>
         </div>
         <button id="btn-delete-day" onclick="window.deleteCurrentDay()" class="w-full mt-4 py-2 font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors text-xs">🗑️ מחק יום זה לחלוטין</button>
-    </div>
-</div>
-
-<!-- Edit Day Links Modal -->
-<div id="day-links-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md text-right p-6 max-h-[90vh] overflow-y-auto flex flex-col">
-        <h2 class="text-xl font-bold mb-2 text-gray-800">עריכת מיקומים מרכזיים ליום</h2>
-        <p class="text-xs text-gray-500 mb-4 leading-relaxed">המיקומים שיוגדרו כאן יופיעו ככפתורים מתחת לתיאור היום, וישמשו את ה-AI כמקור מדויק לבניית ההמלצות.</p>
-        <input type="hidden" id="day-links-dayid">
-        <div id="day-links-list" class="flex flex-col gap-3 mb-4"></div>
-        <button onclick="window.addDayLinkRow()" class="py-2.5 text-xs font-bold text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors mb-6 border border-indigo-100 shadow-sm">+ הוסף מיקום חדש</button>
-        
-        <div class="flex gap-2 mt-auto">
-            <button onclick="window.saveDayLinks()" class="flex-1 py-3 font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md">שמור שינויים</button>
-            <button onclick="window.closeDayLinksModal()" class="px-6 py-3 font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">ביטול</button>
-        </div>
     </div>
 </div>
 
@@ -389,7 +385,7 @@
             <button onclick="window.switchAdminTab('tools')" id="tab-tools" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">כלים</button>
         </div>
 
-        <div class="p-5 overflow-y-auto relative">
+        <div class="p-5 overflow-y-auto relative flex flex-col flex-1">
             <div id="config-guide">
                 <h3 class="text-sm font-bold text-indigo-900 mb-3">ברוכים הבאים למתכנן הטיולים החכם! 🌍</h3>
                 <div class="text-xs text-gray-600 space-y-3 leading-relaxed">
@@ -399,12 +395,14 @@
                         <ul class="list-disc pr-5 mt-1 space-y-1">
                             <li><strong>✨ טיפים:</strong> קבלת המלצות למקומות סודיים ותצפיות סביב יעד היום.</li>
                             <li><strong>🍜 אוכל:</strong> המלצות למסעדות ספציפיות פעילות באזור.</li>
+                            <li><strong>🏨 מלונות:</strong> המלצות לאזורי לינה ומלונות, עם אפשרות לשבץ אותם ישירות ליום.</li>
                             <li><strong>🎯 אופציות:</strong> יצירת חלופות נוספות לפעילויות באותו יום.</li>
                             <li><strong>🤖 תכנן מחדש:</strong> מחיקת לו"ז היום הקיים וכתיבתו מחדש לפי בקשה ספציפית שלך.</li>
                         </ul>
                     </p>
-                    <p><strong>4. ניווט חכם:</strong> כפתור "🗺️ נווט" אוסף את היעדים, הפעילויות והטיפים שבחרת ביום מסוים, ומייצר מסלול נסיעה אוטומטי ב-Google Maps.</p>
-                    <p><strong>5. גיבוי ושמירה:</strong> התחבר עם חשבון גוגל ("גיבוי בענן") כדי לשמור את המסלול אוטומטית ב-Google Drive שלך, או השתמש ב"ייצוא" לשמירת קובץ מקומי במחשב.</p>
+                    <p><strong>4. עריכת ימים ויעדים:</strong> לחיצה על כפתור העיפרון בראש כרטיסיית היום או על הכפתור "ערוך יום ויעדים" תפתח חלונית עריכה מלאה. שם תוכל לערוך את תיאור היום, להוסיף או להסיר מיקומים מרכזיים (יעדים), ולעדכן את פרטי המלון. <strong>טיפ:</strong> לחיצה על אזור המלון בכרטיסייה תפתח את מסך העריכה ישירות על שדה המלון.</p>
+                    <p><strong>5. ניווט חכם:</strong> כפתור "🗺️ נווט" אוסף את היעדים, הפעילויות והטיפים שבחרת ביום מסוים, ומייצר מסלול נסיעה אוטומטי ב-Google Maps.</p>
+                    <p><strong>6. גיבוי ושמירה:</strong> התחבר עם חשבון גוגל ("גיבוי בענן") כדי לשמור את המסלול אוטומטית ב-Google Drive שלך, או השתמש ב"ייצוא" לשמירת קובץ מקומי במחשב.</p>
                 </div>
             </div>
             
@@ -419,6 +417,7 @@
             <div id="config-openai" class="hidden">
                 <input type="password" id="openai-key-input" placeholder="sk-..." class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none rounded-xl px-4 py-2.5 text-sm mb-3 font-mono text-left" dir="ltr">
                 <select id="openai-model-select" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 mb-3">
+                    <option value="gpt-5.2">GPT-5.2</option>
                     <option value="gpt-4o">GPT-4o</option>
                     <option value="gpt-4o-mini">GPT-4o Mini</option>
                 </select>
@@ -453,7 +452,7 @@
                     <textarea id="encrypted-fallback-output" readonly placeholder="התוצאה המוצפנת תופיע כאן..." class="w-full border-2 border-green-200 bg-green-50 text-green-800 rounded-xl px-3 py-2 text-[10px] h-20 font-mono text-left outline-none cursor-copy" dir="ltr" onclick="this.select()"></textarea>
                 </div>
                 
-                <div class="mt-5 pt-5 border-t border-gray-200">
+                <div>
                     <p class="text-sm font-bold text-gray-800 mb-1">גיבוי ושחזור מקומי (JSON)</p>
                     <p class="text-[11px] text-gray-500 mb-3 leading-relaxed">ייצא את כל המסלול, הטיפים וההגדרות לקובץ, או שחזר מתוכו.</p>
                     <div class="flex gap-2">
@@ -470,7 +469,7 @@
             </div>
             <div id="test-key-result" class="hidden mb-3 p-2.5 rounded-xl text-xs font-bold text-center"></div>
 
-            <div class="flex flex-col gap-2 mt-auto">
+            <div class="flex flex-col gap-2 mt-auto pt-4">
                 <button id="btn-test-key" onclick="window.testActiveApiKey()" class="w-full py-2.5 font-bold text-indigo-600 border-2 border-indigo-100 rounded-xl hover:bg-indigo-50 transition-colors">בדוק תקינות מפתח</button>
                 <div class="flex gap-2">
                     <button onclick="window.saveAllConfig()" class="flex-1 py-2.5 font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">שמור הגדרות</button>
@@ -695,7 +694,7 @@
             gemKey: await decryptString(d.gemKeyEncrypted),
             oaiKey: await decryptString(d.oaiKeyEncrypted),
             gemMod: d.gemMod || "gemini-1.5-flash-latest",
-            oaiMod: d.oaiMod || "gpt-4o",
+            oaiMod: d.oaiMod || "gpt-5.2",
             activeProvider: d.activeProvider || "openai"
         };
     };
@@ -1053,7 +1052,7 @@
                         ${t.menu_url ? `<a href="${t.menu_url}" target="_blank" class="text-indigo-600 font-bold underline hover:text-indigo-800 px-2">תפריט</a>` : ''}
                         <button onclick="window.openInIframe('${finalUrl.replace(/'/g, "\\'")}')" class="text-indigo-700 font-bold underline hover:text-indigo-900 px-2">מפה</button>
                         <button onclick="window.openEditTipModal('${day.id}', ${tIdx})" class="text-blue-500 hover:text-blue-700 bg-white p-1.5 rounded-md shadow-sm" title="ערוך"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
-                        <button onclick="window.openRelocateModal('${day.id}', 'tip', ${tIdx})" class="text-gray-500 hover:text-indigo-600 bg-white p-1.5 rounded-md shadow-sm" title="ההעבר"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></button>
+                        <button onclick="window.openRelocateModal('${day.id}', 'tip', ${tIdx})" class="text-gray-500 hover:text-indigo-600 bg-white p-1.5 rounded-md shadow-sm" title="העבר"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></button>
                         <button onclick="window.deleteTip('${day.id}', ${tIdx})" class="text-red-500 hover:text-red-700 bg-white p-1.5 rounded-md shadow-sm" title="מחק"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                     </div>
                 </div>`;
@@ -1078,7 +1077,7 @@
                 
                 <div class="flex flex-wrap gap-2 my-3 items-center">
                     ${linksHtml}
-                    <button onclick="window.openDayLinksModal('${day.id}')" class="px-2 py-1 text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-full">+ ערוך יעדים</button>
+                    <button onclick="window.openEditDayModal('${day.id}')" class="px-2 py-1 text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-full">+ ערוך יום ויעדים</button>
                 </div>
                 
                 ${day.stay ? `
@@ -1135,6 +1134,12 @@
         document.getElementById('edit-day-enloc').value = day.enLoc || "";
         document.getElementById('edit-day-desc').value = day.desc;
         document.getElementById('edit-day-stay').value = day.stay || "";
+        
+        const listEl = document.getElementById('edit-day-links-list');
+        listEl.innerHTML = '';
+        const links = day.mainLinks || [];
+        links.forEach(l => window.addDayLinkRow(l.t, l.u));
+        
         document.getElementById('edit-day-modal').classList.remove('hidden');
     };
     window.closeEditDayModal = () => document.getElementById('edit-day-modal').classList.add('hidden');
@@ -1146,6 +1151,20 @@
             day.enLoc = document.getElementById('edit-day-enloc').value;
             day.desc = document.getElementById('edit-day-desc').value;
             day.stay = document.getElementById('edit-day-stay').value;
+            
+            const dest = day.enLoc ? ` ${day.enLoc}` : "";
+            const rows = document.querySelectorAll('#edit-day-links-list > div');
+            const newLinks = [];
+            rows.forEach(row => {
+                const t = row.querySelector('.link-t').value.trim();
+                let u = row.querySelector('.link-u').value.trim();
+                if (!u && t) {
+                    u = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t + dest)}`;
+                }
+                if(t || u) newLinks.push({ t, u });
+            });
+            day.mainLinks = newLinks;
+            
             renderApp(); syncToCloud();
         }
         window.closeEditDayModal();
@@ -1161,34 +1180,17 @@
         ]);
     };
 
-    window.openDayLinksModal = (dayId) => {
-        document.getElementById('day-links-dayid').value = dayId;
-        const day = window.tripState.days.find(d => d.id === dayId);
-        const links = day ? day.mainLinks : [];
-        
-        const listEl = document.getElementById('day-links-list');
-        listEl.innerHTML = '';
-        links.forEach(l => window.addDayLinkRow(l.t, l.u));
-        if(links.length === 0) window.addDayLinkRow(); 
-        
-        document.getElementById('day-links-modal').classList.remove('hidden');
-    };
-
     window.addDayLinkRow = (t = '', u = '') => {
-        const listEl = document.getElementById('day-links-list');
+        const listEl = document.getElementById('edit-day-links-list');
         const row = document.createElement('div');
-        row.className = "flex flex-col gap-2 p-3 bg-gray-50 border border-gray-200 rounded-xl relative";
+        row.className = "flex flex-col gap-2 p-2.5 bg-white border border-gray-200 rounded-lg relative shadow-sm";
         row.innerHTML = `
-            <button onclick="this.parentElement.remove()" class="absolute top-2 left-2 text-red-400 hover:text-red-600 bg-white rounded-full p-1 shadow-sm"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-            <div>
-                <label class="text-[10px] font-bold text-gray-500 block mb-1">שם המקום</label>
-                <input type="text" class="link-t w-full border border-gray-200 focus:border-indigo-500 rounded-lg px-2 py-1.5 text-xs outline-none" value="${t}">
-            </div>
-            <div>
-                <label class="text-[10px] font-bold text-gray-500 block mb-1">קישור מפות Google</label>
+            <button type="button" onclick="this.parentElement.remove()" class="absolute top-1.5 left-1.5 text-gray-400 hover:text-red-500 bg-gray-50 rounded-md p-1 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+            <div class="pr-6">
+                <input type="text" class="link-t w-full border-b border-gray-200 focus:border-indigo-500 px-1 py-1 text-xs outline-none font-bold text-gray-800 placeholder-gray-400 bg-transparent mb-1.5" value="${t}" placeholder="שם המקום (עברית/אנגלית)">
                 <div class="flex gap-2 items-center">
-                    <input type="text" class="link-u w-full border border-gray-200 focus:border-indigo-500 rounded-lg px-2 py-1.5 text-xs outline-none text-left" dir="ltr" value="${u}" placeholder="השאר ריק לאוטומטי">
-                    <button type="button" onclick="window.generateRowRobustLink(this)" class="bg-indigo-100 text-indigo-700 px-2 py-1.5 rounded-lg text-[10px] font-bold hover:bg-indigo-200 transition-colors whitespace-nowrap">🪄 צור קישור</button>
+                    <input type="text" class="link-u w-full border border-gray-200 focus:border-indigo-500 rounded px-2 py-1 text-[10px] outline-none text-left bg-gray-50" dir="ltr" value="${u}" placeholder="קישור למפה (השאר ריק לאוטומטי)">
+                    <button type="button" onclick="window.generateRowRobustLink(this)" class="text-indigo-600 px-2 py-1 rounded text-[10px] font-bold hover:bg-indigo-50 transition-colors whitespace-nowrap">🪄 צור קישור</button>
                 </div>
             </div>
         `;
@@ -1196,46 +1198,15 @@
     };
 
     window.generateRowRobustLink = (btn) => {
-        const row = btn.closest('.flex-col');
+        const row = btn.closest('.bg-white');
         const name = row.querySelector('.link-t').value.trim();
         if (!name) { window.showAlert("שגיאה", "אנא הזן שם מקום קודם."); return; }
         
-        const dayId = document.getElementById('day-links-dayid').value;
-        const day = window.tripState.days.find(d => d.id === dayId);
-        const dest = (day && day.enLoc) ? ` ${day.enLoc}` : "";
+        let dest = document.getElementById('edit-day-enloc').value.trim();
+        dest = dest ? ` ${dest}` : "";
         
         row.querySelector('.link-u').value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + dest)}`;
     };
-
-    window.saveDayLinks = () => {
-        const dayId = document.getElementById('day-links-dayid').value;
-        const day = window.tripState.days.find(d => d.id === dayId);
-        const dest = (day && day.enLoc) ? ` ${day.enLoc}` : "";
-        
-        const rows = document.querySelectorAll('#day-links-list > div');
-        const newLinks = [];
-        
-        rows.forEach(row => {
-            const t = row.querySelector('.link-t').value.trim();
-            let u = row.querySelector('.link-u').value.trim();
-            
-            // Auto-fill logic if URL is empty
-            if (!u && t) {
-                u = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t + dest)}`;
-            }
-            
-            if(t || u) newLinks.push({ t, u });
-        });
-        
-        if(day) {
-            day.mainLinks = newLinks;
-        }
-        renderApp();
-        syncToCloud();
-        window.closeDayLinksModal();
-    };
-
-    window.closeDayLinksModal = () => document.getElementById('day-links-modal').classList.add('hidden');
 
     // --- Relocation Logic ---
     window.openRelocateModal = (sourceDayId, type, itemIdx) => {
