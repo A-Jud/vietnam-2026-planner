@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>וייטנאם 2026 - Planner V2</title>
+    <title>מתכנן טיולים חכם</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -78,8 +78,8 @@
             <div class="flex justify-between items-center">
                 <div class="text-right flex-1">
                     <h1 class="text-2xl font-black text-gray-900 flex items-center gap-2">
-                        וייטנאם 2026
-                        <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">V2 Planner</span>
+                        מתכנן הטיולים שלי
+                        <span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold">Smart Planner</span>
                     </h1>
                     <div class="flex items-center gap-3 mt-1.5">
                         <div class="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-lg border border-gray-200">
@@ -91,6 +91,9 @@
                 </div>
                 <div class="flex flex-col items-end gap-2">
                     <div class="flex gap-2">
+                        <button onclick="window.exportPlan()" class="text-xs font-bold bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-full hover:bg-green-100 transition-colors shadow-sm flex items-center gap-1">
+                            📥 ייצוא
+                        </button>
                         <button onclick="window.openMultiDayPlannerModal()" class="text-xs font-bold bg-indigo-600 text-white px-3 py-1.5 rounded-full hover:bg-indigo-700 transition-colors shadow-md flex items-center gap-1">
                             🤖 בניית מסלול AI
                         </button>
@@ -155,20 +158,23 @@
         <h2 id="edit-day-title" class="text-xl font-bold mb-4 text-gray-800">עריכת יום</h2>
         <input type="hidden" id="edit-day-id">
         <div class="mb-3">
-            <label class="text-[10px] font-bold text-gray-500">כותרת היום (לדוגמה: הגעה להאנוי)</label>
+            <label class="text-[10px] font-bold text-gray-500">כותרת היום (לדוגמה: הגעה ליעד)</label>
             <input type="text" id="edit-day-t" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none font-bold text-gray-800">
         </div>
         <div class="mb-3">
             <label class="text-[10px] font-bold text-gray-500">שם היעד המרכזי באנגלית (קריטי למפות ול-AI)</label>
-            <input type="text" id="edit-day-enloc" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none text-left font-mono" dir="ltr" placeholder="e.g. Hanoi">
+            <input type="text" id="edit-day-enloc" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none text-left font-mono" dir="ltr" placeholder="e.g. Paris">
         </div>
         <div class="mb-3">
             <label class="text-[10px] font-bold text-gray-500">תיאור ולו"ז</label>
             <textarea id="edit-day-desc" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none resize-none h-24 leading-relaxed"></textarea>
         </div>
         <div class="mb-5">
-            <label class="text-[10px] font-bold text-gray-500">לינה / מלון (אופציונלי)</label>
+            <label class="text-[10px] font-bold text-gray-500 block mb-1">לינה / מלון (אופציונלי)</label>
             <input type="text" id="edit-day-stay" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none">
+            <div class="flex gap-2 mt-1">
+                <button type="button" onclick="window.searchLocationStr('google', 'edit-day-stay', 'edit-day-stay', document.getElementById('edit-day-enloc').value)" class="flex-1 bg-gray-100 text-gray-700 px-2 py-1.5 rounded-lg text-[10px] font-bold hover:bg-gray-200 transition-colors">🔍 חפש בגוגל</button>
+            </div>
         </div>
         <div class="flex gap-2">
             <button onclick="window.saveDayEdit()" class="flex-1 py-3 font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">שמור</button>
@@ -291,6 +297,11 @@
             <p class="text-[9px] text-gray-400">הימנע משימוש בקישורים מקוצרים (goo.gl). מומלץ להשאיר ריק ליצירה אוטומטית בעת השמירה.</p>
         </div>
         
+        <div class="mb-5">
+            <label class="text-[10px] font-bold text-gray-500 block mb-1">קישור לאתר/תפריט המסעדה (אופציונלי)</label>
+            <input type="text" id="edit-tip-menu-url" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none text-left" dir="ltr" placeholder="https://...">
+        </div>
+        
         <div class="flex gap-2">
             <button onclick="window.saveEditedTip()" class="flex-1 py-3 font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md">שמור שינויים</button>
             <button onclick="window.closeEditTipModal()" class="px-6 py-3 font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">ביטול</button>
@@ -305,12 +316,16 @@
         <p class="text-xs text-gray-500 mb-4 leading-relaxed">הזן פרטים וה-AI יבנה עבורך מסלול שלם. תוכל להוסיף את הימים שיווצרו להמשך הטיול שלך או לדרוס הכל.</p>
         
         <div class="mb-3">
-            <label class="text-[10px] font-bold text-gray-500 block mb-1">מאיפה מתחילים?</label>
-            <input type="text" id="ai-plan-origin" placeholder="לדוגמה: האנוי, צפון וייטנאם..." class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none">
+            <label class="text-[10px] font-bold text-gray-500 block mb-1">יעד התחלה / מדינה</label>
+            <input type="text" id="ai-plan-origin" placeholder="לדוגמה: פריז, צרפת או טוקיו, יפן..." class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none">
         </div>
         <div class="mb-3">
             <label class="text-[10px] font-bold text-gray-500 block mb-1">כמה ימים לתכנן?</label>
-            <input type="number" id="ai-plan-days" value="3" min="1" max="10" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none">
+            <input type="number" id="ai-plan-days" value="3" min="1" max="14" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none">
+        </div>
+        <div class="mb-3">
+            <label class="text-[10px] font-bold text-gray-500 block mb-1">מרחק מקסימלי לפעילויות (לדוגמה: 10 km או חצי שעת נסיעה)</label>
+            <input type="text" id="ai-plan-distance" value="10 km" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2 text-sm outline-none">
         </div>
         <div class="mb-5">
             <label class="text-[10px] font-bold text-gray-500 block mb-1">בקשות מיוחדות, סגנון ואווירה (אופציונלי)</label>
@@ -332,9 +347,14 @@
         
         <input type="hidden" id="replan-day-id">
         
+        <div class="mb-3">
+            <label class="text-[10px] font-bold text-gray-500 block mb-1">מרחק מקסימלי לפעילויות מהיעד המרכזי</label>
+            <input type="text" id="ai-replan-distance" value="10 km" class="w-full border-2 border-teal-200 focus:border-teal-500 rounded-xl px-3 py-2 text-sm outline-none bg-white">
+        </div>
+        
         <div class="mb-5">
             <label class="text-[10px] font-bold text-gray-500 block mb-1">מה תרצה לעשות ביום הזה במקום?</label>
-            <textarea id="ai-replan-req" placeholder="לדוגמה: הפוך את זה ליום של פארק מים ומנוחה, תכנן סיור מקדשים עמוס..." class="w-full border-2 border-teal-200 focus:border-teal-500 rounded-xl px-3 py-2 text-sm outline-none resize-none h-24 bg-teal-50"></textarea>
+            <textarea id="ai-replan-req" placeholder="לדוגמה: הפוך את זה ליום של פארק מים ומנוחה, תכנן סיור מוזיאונים עמוס..." class="w-full border-2 border-teal-200 focus:border-teal-500 rounded-xl px-3 py-2 text-sm outline-none resize-none h-24 bg-teal-50"></textarea>
         </div>
         
         <div class="flex gap-2">
@@ -348,11 +368,11 @@
 <div id="route-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-right p-6">
         <h2 class="text-lg font-bold mb-2 text-gray-800 flex items-center gap-2"><span>🗺️</span> מסלול ניווט יומי</h2>
-        <p class="text-xs text-gray-600 mb-5 leading-relaxed">המסלול חושב בהצלחה על בסיס כל המיקומים והאפשרויות שבחרת.</p>
+        <p class="text-xs text-gray-600 mb-5 leading-relaxed">המסלול כולל את היעדים המרכזיים, אפשרויות והמלצות שבחרת.</p>
         <input type="hidden" id="route-modal-url">
         <div class="flex flex-col gap-3">
-            <button onclick="window.handleRouteAction('browser')" class="w-full py-3 font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-md">העתק ופתח בדפדפן</button>
-            <button onclick="window.handleRouteAction('iframe')" class="w-full py-3 font-bold bg-indigo-100 text-indigo-800 rounded-xl hover:bg-indigo-200 transition-colors shadow-sm">פתח בתוך האפליקציה</button>
+            <button onclick="window.handleRouteAction('iframe')" class="w-full py-3 font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md">הצג מסלול בתוך האפליקציה</button>
+            <button onclick="window.handleRouteAction('browser')" class="w-full py-3 font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors shadow-sm">העתק ופתח בדפדפן (לנייד)</button>
             <button onclick="document.getElementById('route-modal').classList.add('hidden')" class="w-full py-2.5 font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors mt-1">סגור</button>
         </div>
     </div>
@@ -362,24 +382,44 @@
 <div id="api-key-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md text-right flex flex-col max-h-[90vh]">
         <div class="flex border-b bg-gray-50 shrink-0 text-xs overflow-x-auto hide-scroll rounded-t-2xl">
-            <button onclick="window.switchAdminTab('gemini')" id="tab-gemini" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-indigo-600 border-indigo-600 bg-indigo-50 transition-all">Gemini</button>
+            <button onclick="window.switchAdminTab('guide')" id="tab-guide" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-indigo-600 border-indigo-600 bg-indigo-50 transition-all">איך להשתמש</button>
+            <button onclick="window.switchAdminTab('gemini')" id="tab-gemini" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">Gemini</button>
             <button onclick="window.switchAdminTab('openai')" id="tab-openai" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">OpenAI</button>
             <button onclick="window.switchAdminTab('prompts')" id="tab-prompts" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">פרומפטים</button>
             <button onclick="window.switchAdminTab('tools')" id="tab-tools" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">כלים</button>
         </div>
 
         <div class="p-5 overflow-y-auto relative">
-            <div id="config-gemini">
+            <div id="config-guide">
+                <h3 class="text-sm font-bold text-indigo-900 mb-3">ברוכים הבאים למתכנן הטיולים החכם! 🌍</h3>
+                <div class="text-xs text-gray-600 space-y-3 leading-relaxed">
+                    <p><strong>1. הגדרת חיבור (חובה):</strong> כדי שה-AI יעבוד, עליך להזין מפתח API (של OpenAI או Gemini) בלשונית המתאימה, לבחור אותו כספק הפעיל למטה ולשמור.</p>
+                    <p><strong>2. בניית מסלול מהיר:</strong> לחץ על "בניית מסלול AI" במסך הראשי, הזן את היעד ומספר הימים, והמערכת תבנה עבורך מסלול שלם.</p>
+                    <p><strong>3. שדרוג כל יום בנפרד:</strong> בכל יום במסלול ישנם כפתורי קסם בתחתית הכרטיסייה:
+                        <ul class="list-disc pr-5 mt-1 space-y-1">
+                            <li><strong>✨ טיפים:</strong> קבלת המלצות למקומות סודיים ותצפיות סביב יעד היום.</li>
+                            <li><strong>🍜 אוכל:</strong> המלצות למסעדות ספציפיות פעילות באזור.</li>
+                            <li><strong>🎯 אופציות:</strong> יצירת חלופות נוספות לפעילויות באותו יום.</li>
+                            <li><strong>🤖 תכנן מחדש:</strong> מחיקת לו"ז היום הקיים וכתיבתו מחדש לפי בקשה ספציפית שלך.</li>
+                        </ul>
+                    </p>
+                    <p><strong>4. ניווט חכם:</strong> כפתור "🗺️ נווט" אוסף את היעדים, הפעילויות והטיפים שבחרת ביום מסוים, ומייצר מסלול נסיעה אוטומטי ב-Google Maps.</p>
+                    <p><strong>5. גיבוי ושמירה:</strong> התחבר עם חשבון גוגל ("גיבוי בענן") כדי לשמור את המסלול אוטומטית ב-Google Drive שלך, או השתמש ב"ייצוא" לשמירת קובץ מקומי במחשב.</p>
+                </div>
+            </div>
+            
+            <div id="config-gemini" class="hidden">
                 <input type="password" id="gemini-key-input" placeholder="AIzaSy..." class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none rounded-xl px-4 py-2.5 text-sm mb-3 font-mono text-left" dir="ltr">
                 <select id="gemini-model-select" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 mb-3">
                     <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (מומלץ)</option>
                     <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro</option>
                 </select>
             </div>
+            
             <div id="config-openai" class="hidden">
                 <input type="password" id="openai-key-input" placeholder="sk-..." class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none rounded-xl px-4 py-2.5 text-sm mb-3 font-mono text-left" dir="ltr">
                 <select id="openai-model-select" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 mb-3">
-                    <option value="gpt-5.2">GPT-5.2</option>
+                    <option value="gpt-4o">GPT-4o</option>
                     <option value="gpt-4o-mini">GPT-4o Mini</option>
                 </select>
             </div>
@@ -395,6 +435,9 @@
                 <label class="text-[11px] font-bold text-orange-800">פרומפט - אוכל מקומי (Food):</label>
                 <textarea id="prompt-food-input" class="w-full border-2 border-gray-200 focus:border-orange-500 rounded-xl px-2 py-2 text-[10px] mb-2 h-20 font-mono text-left outline-none" dir="ltr"></textarea>
 
+                <label class="text-[11px] font-bold text-pink-800">פרומפט - המלצות מלונות (Hotels):</label>
+                <textarea id="prompt-hotels-input" class="w-full border-2 border-pink-200 focus:border-pink-500 rounded-xl px-2 py-2 text-[10px] mb-2 h-20 font-mono text-left outline-none" dir="ltr"></textarea>
+
                 <label class="text-[11px] font-bold text-blue-800">פרומפט - בניית מסלול כללי (Multi-Day):</label>
                 <textarea id="prompt-multiday-input" class="w-full border-2 border-gray-200 focus:border-blue-500 rounded-xl px-2 py-2 text-[10px] h-20 font-mono text-left outline-none" dir="ltr"></textarea>
                 
@@ -402,9 +445,13 @@
             </div>
             
             <div id="config-tools" class="hidden">
-                <input type="password" id="raw-fallback-input" placeholder="הדבק מפתח מקורי" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-xs mb-2 font-mono text-left outline-none" dir="ltr">
-                <button onclick="window.generateEncryptedFallback()" class="w-full py-2 font-bold bg-gray-800 text-white rounded-xl mb-4 text-xs hover:bg-gray-900 transition-colors">הצפן מפתח</button>
-                <textarea id="encrypted-fallback-output" readonly class="w-full border-2 border-green-200 bg-green-50 text-green-800 rounded-xl px-3 py-2 text-[10px] h-20 font-mono text-left outline-none cursor-copy" dir="ltr" onclick="this.select()"></textarea>
+                <div class="mb-5 pb-5 border-b border-gray-200">
+                    <p class="text-sm font-bold text-gray-800 mb-1">הצפנת מפתח לקוד (Fallback)</p>
+                    <p class="text-[10px] text-gray-500 mb-3 leading-relaxed">כלי זה מיועד להצפנת מפתח כדי להטמיע אותו ישירות בקוד המקור תחת המשתנה FALLBACK_OAI_KEY. זה לא שומר את המפתח לשימוש מיידי באפליקציה. להזנת מפתח לשימוש, עבור ללשוניות הספקים (OpenAI/Gemini).</p>
+                    <input type="password" id="raw-fallback-input" placeholder="הדבק מפתח מקורי כאן" class="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-xs mb-2 font-mono text-left outline-none" dir="ltr">
+                    <button onclick="window.generateEncryptedFallback()" type="button" class="w-full py-2 font-bold bg-gray-800 text-white rounded-xl mb-4 text-xs hover:bg-gray-900 transition-colors">הצפן מפתח והעתק</button>
+                    <textarea id="encrypted-fallback-output" readonly placeholder="התוצאה המוצפנת תופיע כאן..." class="w-full border-2 border-green-200 bg-green-50 text-green-800 rounded-xl px-3 py-2 text-[10px] h-20 font-mono text-left outline-none cursor-copy" dir="ltr" onclick="this.select()"></textarea>
+                </div>
                 
                 <div class="mt-5 pt-5 border-t border-gray-200">
                     <p class="text-sm font-bold text-gray-800 mb-1">גיבוי ושחזור מקומי (JSON)</p>
@@ -439,37 +486,34 @@
 <script type="module">
     const CLIENT_ID = "449350453148-rptakuolagf5deu5rn8u9ep1o76lmqj4.apps.googleusercontent.com";
     const SCOPES = "https://www.googleapis.com/auth/drive.file"; 
-    const FALLBACK_OAI_KEY = "ENC_AES_GCM:2HSFwAqFaXYigLET:rj5wKlL6OEzLDEPUao+6k9YXNZ9W3aXGxX68Y3qtjDKoyqzhAJ3WjmdPdBIuE2lTmvC6W7pzQJxFRagcVc9uIrDGPzZHrAhZjbr44qV3WSaiPYzz15U+bmoCig0FNpvs67i4B2ntuhI3+VfjeUNWKyx/JUIrSSzgu9Uz6NsWMOqME78AOWZylScbvlYSdbcqNFRT9W8MPaH0fAaRwGUqmQCy/tZ67JRL9Rf1ptn7ohHtaFB+";
-    const FOLDER_NAME = "Vietnam 2026 Planner";
-    const FILE_NAME = "vietnam_trip_data.json";
+    const FALLBACK_OAI_KEY = "ENC_AES_GCM:V0HcItMGT4+Q2kAN:TbIF9lkEoNak7ZD4fvLPm3rfaKGPXRzWSXEU0m45tOItSIAmmaGUikuEnYUwmD0gDTfjkiH6ejAE7+/bza9SP35JzZfMcXJUN/QtviOp2W57PY6L4tqYgGZfTputmzRS7D/AWa4Ca4KXNIAZd4vDOrBk3NYqrFWFW/tvoA+d7mk9lm2afVy1MfWrQs68BsxPifkCWFMf0k9B5D0xACwlw6ch1rFZj71fazCe2lk0q/C5c7yB";
+    const FOLDER_NAME = "My Trip Planner";
+    const FILE_NAME = "trip_data.json";
 
-    // AI Prompts Setup - Updated to enforce robust URL parameters
-    const defaultTipsPrompt = "Trip context: Vietnam.\nCurrent Location (English): <שם_באנגלית>\n[Optional] Destination (Hebrew): <יעד>\n[Optional] Date: <תאריך>\n[Optional] Main Points of Interest: <מיקומים_מרכזיים>\n[Optional] Context: <תיאור>\n\nCRITICAL GEOGRAPHIC CONSTRAINT: You MUST suggest 2 hidden gems, restaurants, or viewpoints physically located EXACTLY IN or within a 1-hour drive of <שם_באנגלית>, Vietnam. Do NOT suggest places outside Vietnam or in distant provinces.\n\nOutput in Hebrew. JSON ONLY: {\"tips\":[{\"title\":\"Hebrew name\",\"en_title\":\"English Name\",\"emoji\":\"🚀\",\"text\":\"desc\",\"url\":\"https://www.google.com/maps/search/?api=1&query=English+Name+Vietnam\"}]}. Use robust search URLs, NOT short links.";
-    const defaultOptionsPrompt = "Trip context: Vietnam.\nCurrent Location (English): <שם_באנגלית>\n[Optional] Destination (Hebrew): <יעד>\n[Optional] Date: <תאריך>\n[Optional] Main Points of Interest: <מיקומים_מרכזיים>\n[Optional] Context: <תיאור>\n\nCRITICAL GEOGRAPHIC CONSTRAINT: Generate exactly 3 different daily activity options. All activities MUST be physically located EXACTLY IN or within a practical day-trip distance (max 1.5 hours) from <שם_באנגלית>, Vietnam. Do NOT suggest places outside Vietnam or in distant provinces. Ensure logistical feasibility.\n\nOutput in Hebrew. JSON format ONLY: {\"options\":[{\"t\":\"Hebrew title\",\"en_t\":\"English title\",\"d\":\"short description\",\"u\":\"https://www.google.com/maps/search/?api=1&query=English+title+Vietnam\"}]}. Use robust search URLs, NOT short links.";
-    const defaultFoodPrompt = "Trip context: Vietnam.\nCurrent Location (English): <שם_באנגלית>\n[Optional] Destination (Hebrew): <יעד>\n\nTask: Suggest 3 specific local Vietnamese dishes, street food, or types of food to try today in <שם_באנגלית>. \n\nOutput in Hebrew. JSON ONLY exactly like this format:\n{\n \"food\": [\n  {\n   \"dish\": \"Hebrew Name\",\n   \"en_dish\": \"English/Vietnamese Name\",\n   \"desc\": \"Description of the dish\"\n  }\n ]\n}";
-    const multiDayAIPrompt = "Trip context: Vietnam.\nTask: Generate a <NUM_DAYS>-day itinerary starting from <ORIGIN>.\nStyle/Preferences: <VIBE>\n\nCRITICAL GEOGRAPHIC CONSTRAINT: Progress logically from origin. Ensure driving/flying times between days make real-world sense. Do NOT suggest places outside Vietnam.\n\nOutput in Hebrew. JSON ONLY exactly like this format:\n{\n \"days\": [\n  {\n   \"title\": \"Day Title (e.g. Hanoi -> Sapa)\",\n   \"location\": \"hanoi\",\n   \"enLoc\": \"English primary city name\",\n   \"desc\": \"Detailed hourly schedule using bullet points or line breaks\",\n   \"stay\": \"Hotel/Area suggestion\",\n   \"mainLinks\": [{\"t\": \"Main place Hebrew\", \"u\": \"https://www.google.com/maps/search/?api=1&query=Location+Vietnam\"}],\n   \"options\": [{\"id\":\"random_1\",\"t\":\"Opt1 Hebrew\",\"en_t\":\"English\",\"d\":\"Desc\",\"u\":\"https://www.google.com/maps/search/?api=1&query=English+Name+Vietnam\"}]\n  }\n ]\n}";
-    const singleDayReplanPrompt = "Trip context: Vietnam.\nTask: Completely replan the single day for destination: <שם_באנגלית> (<יעד>).\nContext: Yesterday the user was in <YESTERDAY>. Tomorrow they will be in <TOMORROW>.\nUser Request/Vibe: <REQUEST>\n\nCRITICAL GEOGRAPHIC CONSTRAINT: Everything MUST be physically located in/around <שם_באנגלית>.\n\nOutput in Hebrew. JSON ONLY exactly like this format:\n{\n \"day\": {\n   \"title\": \"New Day Title\",\n   \"desc\": \"Detailed new hourly schedule\",\n   \"mainLinks\": [{\"t\": \"Main place Hebrew\", \"u\": \"https://www.google.com/maps/search/?api=1&query=Location+Vietnam\"}],\n   \"options\": [{\"id\":\"rand_1\",\"t\":\"Hebrew\",\"en_t\":\"English\",\"d\":\"Desc\",\"u\":\"https://www.google.com/maps/search/?api=1&query=English+Name+Vietnam\"}]\n }\n}";
+    // AI Prompts Setup - Generalized
+    const defaultTipsPrompt = "Trip context: International Travel.\nCurrent Location (English): <שם_באנגלית>\n[Optional] Destination (Hebrew): <יעד>\n[Optional] Date: <תאריך>\n[Optional] Main Points of Interest: <מיקומים_מרכזיים>\n[Optional] Context: <תיאור>\n\nCRITICAL GEOGRAPHIC CONSTRAINT: You MUST suggest 2 hidden gems, attractions, or viewpoints physically located EXACTLY IN or within a 1-hour drive of <שם_באנגלית>. Do NOT suggest places outside this specific region. Do NOT suggest food, restaurants, or cafes.\n\nOutput in Hebrew. JSON ONLY: {\"tips\":[{\"title\":\"Hebrew name\",\"en_title\":\"English Name\",\"emoji\":\"🚀\",\"text\":\"desc\",\"url\":\"https://www.google.com/maps/search/?api=1&query=English+Name\"}]}. Use robust search URLs, NOT short links.";
+    const defaultOptionsPrompt = "Trip context: International Travel.\nCurrent Location (English): <שם_באנגלית>\n[Optional] Destination (Hebrew): <יעד>\n[Optional] Date: <תאריך>\n[Optional] Main Points of Interest: <מיקומים_מרכזיים>\n[Optional] Context: <תיאור>\n\nCRITICAL GEOGRAPHIC CONSTRAINT: Generate exactly 3 different daily activity options. All activities MUST be physically located EXACTLY IN or within a practical day-trip distance (max 1.5 hours) from <שם_באנגלית>. Ensure logistical feasibility.\n\nOutput in Hebrew. JSON format ONLY: {\"options\":[{\"t\":\"Hebrew title\",\"en_t\":\"English title\",\"d\":\"short description\",\"u\":\"https://www.google.com/maps/search/?api=1&query=English+title\"}]}. Use robust search URLs, NOT short links.";
+    const defaultFoodPrompt = "Trip context: International Travel.\nCurrent Location (English): <שם_באנגלית>\n[Optional] Destination (Hebrew): <יעד>\n\nTask: Suggest 3 specific local dishes to try today in <שם_באנגלית> AND recommend a SPECIFIC, currently active restaurant for each.\n\nCRITICAL CONSTRAINTS:\n1. Verify internally that the restaurant is ACTIVE on Google Maps.\n2. Verify the recommended dish is actually on their menu.\n3. Provide the official website or menu URL for the restaurant.\n\nOutput in Hebrew. JSON ONLY exactly like this format:\n{\n \"food\": [\n  {\n   \"dish\": \"Hebrew Dish Name\",\n   \"en_dish\": \"English/Local Dish Name\",\n   \"restaurant\": \"Hebrew Restaurant Name\",\n   \"en_restaurant\": \"English/Local Restaurant Name\",\n   \"desc\": \"Description of the dish and why this restaurant is recommended\",\n   \"menu_url\": \"https://link-to-menu-or-website\"\n  }\n ]\n}";
+    const defaultHotelsPrompt = "Trip context: International Travel.\nCurrent Location (English): <שם_באנגלית>\n[Optional] Destination (Hebrew): <יעד>\n[Optional] Vibe/Context: <תיאור>\n\nTask: Suggest 3 highly-rated, currently active hotels or distinct neighborhoods to stay in <שם_באנגלית>.\n\nCRITICAL CONSTRAINTS:\n1. Ensure the hotels are located exactly in or very close to <שם_באנגלית>.\n2. Provide different options (e.g., luxury, budget, family-friendly, specific neighborhood).\n\nOutput in Hebrew. JSON ONLY exactly like this format:\n{\n \"hotels\": [\n  {\n   \"name\": \"Hebrew Hotel/Area Name\",\n   \"en_name\": \"English Hotel/Area Name\",\n   \"desc\": \"Short description of the vibe, price level, and why it's recommended\",\n   \"url\": \"https://www.google.com/maps/search/?api=1&query=English+Hotel+Name\"\n  }\n ]\n}";
+    const multiDayAIPrompt = "Trip context: International Travel.\nTask: Generate a <NUM_DAYS>-day itinerary starting from <ORIGIN>.\nStyle/Preferences: <VIBE>\n\nCRITICAL GEOGRAPHIC CONSTRAINT: Progress logically from origin. Ensure driving/flying times between days make real-world sense. Do NOT suggest places outside the target country/region.\nAll daily activities and options MUST be physically located EXACTLY IN or within <DISTANCE> of the daily destination.\n\nIMPORTANT:\n1. For EVERY significant attraction, neighborhood, or specific place mentioned in the 'desc', you MUST create a corresponding entry in the 'mainLinks' array.\n2. For 'options', provide an accurate descriptive name in both Hebrew ('t') and English ('en_t').\n3. The map URL ('u') MUST query the exact English name + the daily destination town/province.\n\nOutput in Hebrew. JSON ONLY exactly like this format:\n{\n \"days\": [\n  {\n   \"title\": \"Day Title (e.g. Arrival in Paris)\",\n   \"location\": \"paris\",\n   \"enLoc\": \"English primary city name\",\n   \"desc\": \"Detailed hourly schedule using bullet points or line breaks\",\n   \"stay\": \"Hotel/Area suggestion\",\n   \"mainLinks\": [{\"t\": \"Attraction 1\", \"u\": \"https://www.google.com/maps/search/?api=1&query=Attraction+1+City\"}, {\"t\": \"Attraction 2\", \"u\": \"https://www.google.com/maps/search/?api=1&query=Attraction+2+City\"}],\n   \"options\": [{\"id\":\"random_1\",\"t\":\"Hebrew Activity Name\",\"en_t\":\"English Activity Name\",\"d\":\"Desc\",\"u\":\"https://www.google.com/maps/search/?api=1&query=English+Activity+Name+City\"}]\n  }\n ]\n}";
+    const singleDayReplanPrompt = "Trip context: International Travel.\nTask: Completely replan the single day for destination: <שם_באנגלית> (<יעד>).\nContext: Yesterday the user was in <YESTERDAY>. Tomorrow they will be in <TOMORROW>.\nUser Request/Vibe: <REQUEST>\n\nCRITICAL GEOGRAPHIC CONSTRAINT: Everything MUST be physically located EXACTLY IN or within <DISTANCE> of <שם_באנגלית>.\n\nIMPORTANT:\n1. For EVERY significant attraction, neighborhood, or specific place mentioned in the 'desc', you MUST create a corresponding entry in the 'mainLinks' array.\n2. For 'options', provide an accurate descriptive name in both Hebrew ('t') and English ('en_t').\n3. The map URL ('u') MUST query the exact English name + <שם_באנגלית>.\n\nOutput in Hebrew. JSON ONLY exactly like this format:\n{\n \"day\": {\n   \"title\": \"New Day Title\",\n   \"desc\": \"Detailed new hourly schedule\",\n   \"mainLinks\": [{\"t\": \"Attraction 1\", \"u\": \"https://www.google.com/maps/search/?api=1&query=Attraction+1+City\"}, {\"t\": \"Attraction 2\", \"u\": \"https://www.google.com/maps/search/?api=1&query=Attraction+2+City\"}],\n   \"options\": [{\"id\":\"rand_1\",\"t\":\"Hebrew Activity Name\",\"en_t\":\"English Activity Name\",\"d\":\"Desc\",\"u\":\"https://www.google.com/maps/search/?api=1&query=English+Activity+Name+City\"}]\n }\n}";
 
-    // V2 Unified State
+    // Unified State
     window.tripState = {
-        startDate: "2026-03-30",
+        startDate: new Date().toISOString().slice(0, 10),
         days: []
     };
     window.customPrompts = {}; 
     let accessToken = null, driveFolderId = null, driveFileId = null;
 
-    // Static Data for Migration
-    const legacyItinerary = [
-        { title: "הגעה להאנוי", location: "hanoi", desc: "נחיתה בערב, התארגנות ברובע העתיק.", links: [{t: "מפה", u: "https://www.google.com/maps?q=Hanoi+Old+Quarter"}] },
-        { title: "האנוי ← סאפה", location: "sapa", desc: "נסיעה של 6 שעות ברכב VIP לסאפה.", options: [{id:"A",t:"רכבל פנסיפאן",en_t:"Fansipan Cable Car",d:"תצפית מהפסגה",u:"https://sunworld.vn/en/fansipan"},{id:"B",t:"כפר קאט קאט",en_t:"Cat Cat Village",d:"טיול רגלי קצר",u:"https://www.google.com/maps?q=Cat+Cat+Village+Sapa"},{id:"C",t:"אקשן: אומגה",d:"חבלים ואקשן",u:"https://www.google.com/maps/search/zipline+near+Sapa"}] },
-        { title: "עמק מואונג הואה", location: "sapa", desc: "טרק טרסות האורז הקלאסי.", links: [{t: "Muong Hoa", u: "https://www.google.com/maps?q=Muong+Hoa+Valley"}] },
-        { title: "סאפה - יום טבע נוסף", location: "sapa", desc: "יום לבחירה מתוך שלוש אפשרויות.", options: [{id:"A",t:"O Quy Ho + מפלים",en_t:"O Quy Ho Pass",d:"מעבר ההרים הגבוה",u:"https://www.google.com/maps?q=O+Quy+Ho+Pass"},{id:"B",t:"טרק + אמבט צמחים",en_t:"Giang Ta Chai",d:"טרק ב-Giang Ta Chai",u:"https://www.google.com/maps?q=Giang+Ta+Chai"}] },
-        { title: "סאפה ← נין בין", location: "ninhbinh", desc: "נסיעה דרומה ורכיבה על אופניים בטאם קוק.", stay: "Ninh Binh Retreat", links: [{t: "טאם קוק", u: "https://www.google.com/maps?q=Tam+Coc"}] }
+    // Default Starting Template
+    const initialTemplate = [
+        { title: "הגעה והתארגנות", location: "arrival", enLoc: "", desc: "נחיתה ביעד, איסוף מזוודות ונסיעה למלון. זמן חופשי להתרעננות והיכרות ראשונית עם האזור.", links: [] }
     ];
 
     // Helpers
     const generateId = (prefix) => prefix + '_' + Date.now() + '_' + Math.floor(Math.random()*10000);
-    const getEnglishLoc = (locCode) => { const m = {'hanoi':'Hanoi','sapa':'Sapa','ninhbinh':'Ninh Binh','hoian':'Hoi An','danang':'Da Nang','halong':'Ha Long Bay'}; return m[locCode] || locCode || ""; };
+    const getEnglishLoc = (locCode) => locCode || ""; 
     const getDisplayDate = (startStr, offsetDays) => {
         let d = new Date(startStr);
         if(isNaN(d.getTime())) return "";
@@ -495,7 +539,7 @@
     };
 
     // --- Web Crypto API ---
-    const SECRET_SALT = "Vietnam_Trip_AES_2026_SecureKey_!@#";
+    const SECRET_SALT = "Generic_Trip_AES_2026_SecureKey_!@#";
     async function getEncryptionKey() {
         const enc = new TextEncoder();
         const keyMaterial = await window.crypto.subtle.digest("SHA-256", enc.encode(SECRET_SALT));
@@ -504,6 +548,7 @@
     async function encryptString(plainText) {
         if (!plainText) return "";
         try {
+            if (!window.crypto || !window.crypto.subtle) return `ENC_B64:${btoa(plainText)}`;
             const key = await getEncryptionKey();
             const iv = window.crypto.getRandomValues(new Uint8Array(12));
             const enc = new TextEncoder();
@@ -511,12 +556,14 @@
             const ivB64 = btoa(String.fromCharCode(...iv));
             const encB64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
             return `ENC_AES_GCM:${ivB64}:${encB64}`;
-        } catch (e) { return ""; }
+        } catch (e) { return `ENC_B64:${btoa(plainText)}`; }
     }
     async function decryptString(encryptedPayload) {
         if (!encryptedPayload) return "";
+        if (encryptedPayload.startsWith("ENC_B64:")) return atob(encryptedPayload.split(":")[1]);
         if (!encryptedPayload.startsWith("ENC_AES_GCM:")) return encryptedPayload;
         try {
+            if (!window.crypto || !window.crypto.subtle) return "";
             const parts = encryptedPayload.split(":");
             const iv = new Uint8Array(atob(parts[1]).split('').map(c => c.charCodeAt(0)));
             const encData = new Uint8Array(atob(parts[2]).split('').map(c => c.charCodeAt(0)));
@@ -542,7 +589,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `vietnam_plan_${new Date().toISOString().slice(0,10)}.json`;
+        a.download = `my_trip_plan_${new Date().toISOString().slice(0,10)}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -576,8 +623,8 @@
     };
 
     window.switchAdminTab = (tab) => {
-        ['config-gemini', 'config-openai', 'config-prompts', 'config-tools'].forEach(id => document.getElementById(id).classList.add('hidden'));
-        ['tab-gemini', 'tab-openai', 'tab-prompts', 'tab-tools'].forEach(id => {
+        ['config-guide', 'config-gemini', 'config-openai', 'config-prompts', 'config-tools'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        ['tab-guide', 'tab-gemini', 'tab-openai', 'tab-prompts', 'tab-tools'].forEach(id => {
             const el = document.getElementById(id);
             el.classList.remove('active', 'text-indigo-600', 'border-indigo-600', 'bg-indigo-50');
             el.classList.add('text-gray-500', 'border-transparent');
@@ -596,6 +643,7 @@
         document.getElementById('prompt-tips-input').value = defaultTipsPrompt;
         document.getElementById('prompt-options-input').value = defaultOptionsPrompt;
         document.getElementById('prompt-food-input').value = defaultFoodPrompt;
+        document.getElementById('prompt-hotels-input').value = defaultHotelsPrompt;
         document.getElementById('prompt-multiday-input').value = multiDayAIPrompt;
     };
 
@@ -611,11 +659,12 @@
             oaiMod: document.getElementById('openai-model-select').value,
             activeProvider: document.getElementById('active-provider-select').value
         };
-        localStorage.setItem('vtn_crypto_config_v9', JSON.stringify(configs));
+        localStorage.setItem('trip_crypto_config_v1', JSON.stringify(configs));
         window.customPrompts = {
             tips: document.getElementById('prompt-tips-input').value.trim() || defaultTipsPrompt,
             options: document.getElementById('prompt-options-input').value.trim() || defaultOptionsPrompt,
             food: document.getElementById('prompt-food-input').value.trim() || defaultFoodPrompt,
+            hotels: document.getElementById('prompt-hotels-input').value.trim() || defaultHotelsPrompt,
             multiday: document.getElementById('prompt-multiday-input').value.trim() || multiDayAIPrompt
         };
         syncToCloud();
@@ -623,7 +672,7 @@
     };
 
     window.loadConfigToUI = async () => {
-        const d = JSON.parse(localStorage.getItem('vtn_crypto_config_v9') || "{}");
+        const d = JSON.parse(localStorage.getItem('trip_crypto_config_v1') || "{}");
         if(d.gemKeyEncrypted) document.getElementById('gemini-key-input').value = await decryptString(d.gemKeyEncrypted);
         if(d.oaiKeyEncrypted) document.getElementById('openai-key-input').value = await decryptString(d.oaiKeyEncrypted);
         if(d.gemMod) document.getElementById('gemini-model-select').value = d.gemMod;
@@ -633,17 +682,21 @@
         document.getElementById('prompt-tips-input').value = window.customPrompts?.tips || defaultTipsPrompt;
         document.getElementById('prompt-options-input').value = window.customPrompts?.options || defaultOptionsPrompt;
         document.getElementById('prompt-food-input').value = window.customPrompts?.food || defaultFoodPrompt;
+        document.getElementById('prompt-hotels-input').value = window.customPrompts?.hotels || defaultHotelsPrompt;
         document.getElementById('prompt-multiday-input').value = window.customPrompts?.multiday || multiDayAIPrompt;
+        
+        // Default to guide tab when opening
+        window.switchAdminTab('guide');
     };
 
     window.getDecryptedConfig = async () => {
-        const d = JSON.parse(localStorage.getItem('vtn_crypto_config_v9') || "{}");
+        const d = JSON.parse(localStorage.getItem('trip_crypto_config_v1') || "{}");
         return {
             gemKey: await decryptString(d.gemKeyEncrypted),
             oaiKey: await decryptString(d.oaiKeyEncrypted),
             gemMod: d.gemMod || "gemini-1.5-flash-latest",
-            oaiMod: d.oaiMod || "gpt-5.2",
-            activeProvider: d.activeProvider || "gemini"
+            oaiMod: d.oaiMod || "gpt-4o",
+            activeProvider: d.activeProvider || "openai"
         };
     };
 
@@ -694,10 +747,8 @@
         try {
             let u = new URL(url);
             if (u.hostname.includes('google') && (u.pathname.includes('maps') || u.hostname.includes('maps'))) {
-                // Handling the robust /search/ format query string
                 let query = u.searchParams.get('q') || u.searchParams.get('query');
                 
-                // Fallbacks for other known maps formats
                 if (!query && u.pathname.includes('/place/')) query = decodeURIComponent(u.pathname.split('/place/')[1].split('/')[0]);
                 if (!query && u.pathname.includes('/search/')) query = decodeURIComponent(u.pathname.split('/search/')[1].split('/')[0]);
                 if (!query && u.pathname.includes('/dir/')) {
@@ -705,13 +756,13 @@
                     let daddr = encodeURIComponent(u.searchParams.get('destination'));
                     if (wp) daddr = wp.split('|').map(encodeURIComponent).join('+to:') + '+to:' + daddr;
                     embedUrl = `https://maps.google.com/maps?saddr=${encodeURIComponent(u.searchParams.get('origin'))}&daddr=${daddr}&output=embed`;
-                    query = "dir_handled"; // just to pass the embed logic
+                    query = "dir_handled"; 
                 }
                 
                 if (query && query !== "dir_handled") {
                     embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed`; 
                 } else if (!query) {
-                    shouldEmbed = false; // Probably a short link (goo.gl), pop out
+                    shouldEmbed = false; 
                 }
             }
         } catch(e) {}
@@ -736,7 +787,7 @@
         if (CLIENT_ID === "YOUR_GOOGLE_CLIENT_ID_HERE") syncEl.innerText = '⚠️ מקומי בלבד';
         else { syncEl.innerText = '⏳ מתחבר...'; document.getElementById('auth-btn').classList.remove('hidden'); }
         
-        const localData = JSON.parse(localStorage.getItem('vtn_local_tripData') || "{}");
+        const localData = JSON.parse(localStorage.getItem('trip_local_data_v1') || "{}");
         migrateAndApplyState(localData);
     };
     const gsiScript = document.createElement('script'); gsiScript.src = 'https://accounts.google.com/gsi/client'; gsiScript.async = true; gsiScript.defer = true; gsiScript.onload = window.initGIS; document.head.appendChild(gsiScript);
@@ -748,25 +799,11 @@
         if (data.tripState && Array.isArray(data.tripState.days)) {
             window.tripState = data.tripState;
         } else {
-            window.tripState.days = legacyItinerary.map((ld, i) => {
-                let mergedOpts = [];
-                let overrides = (data.baseOptOverrides || {})[i] || {};
-                (ld.options||[]).forEach(bo => {
-                    if(overrides[bo.id] && overrides[bo.id].deleted) return;
-                    let o = { id: bo.id, t: bo.t, en_t: bo.en_t, d: bo.d, u: bo.u };
-                    if(overrides[bo.id]) { Object.assign(o, overrides[bo.id]); }
-                    mergedOpts.push(o);
-                });
-                let cOpts = (data.customOptions || {})[i] || [];
-                mergedOpts = mergedOpts.concat(cOpts);
-                
-                let sOpts = (data.options || {})[i] || [];
-                if(!Array.isArray(sOpts)) sOpts = [sOpts];
-                
+            window.tripState.days = initialTemplate.map((ld, i) => {
                 return {
                     id: generateId('day'), title: ld.title, location: ld.location, enLoc: getEnglishLoc(ld.location),
-                    desc: ld.desc, stay: ld.stay || "", mainLinks: (data.customDayLinks || {})[i] || ld.links || [],
-                    options: mergedOpts, selectedOptions: sOpts, tips: (data.tips || {})[i] || []
+                    desc: ld.desc, stay: ld.stay || "", mainLinks: ld.links || [],
+                    options: [], selectedOptions: [], tips: []
                 };
             });
         }
@@ -800,7 +837,7 @@
     async function syncToCloud() {
         const payload = { tripState: window.tripState, prompts: window.customPrompts };
         if (!accessToken) {
-            localStorage.setItem('vtn_local_tripData', JSON.stringify(payload));
+            localStorage.setItem('trip_local_data_v1', JSON.stringify(payload));
             if(CLIENT_ID !== "YOUR_GOOGLE_CLIENT_ID_HERE") document.getElementById('sync-status').innerText = '💾 נשמר מקומית';
             return;
         }
@@ -823,16 +860,34 @@
     }
 
     // --- UI/Map Implementation with Geocoding API ---
-    const mapObj = L.map('map', { zoomControl: false }).setView([16.5, 107.5], 6);
+    const mapObj = L.map('map', { zoomControl: false }).setView([31.5, 34.5], 2); // Default zoom out to world view
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }).addTo(mapObj);
     let mapLayerGroup = L.layerGroup().addTo(mapObj);
 
-    window.locationCache = { 
-        'hanoi':[21.0285,105.8542], 'sapa':[22.3333,103.8333], 'ninhbinh':[20.2539,105.9750], 
-        'hoian':[15.8801,108.3380], 'danang':[16.0544,108.2022], 'halong':[20.7915,107.0543], 
-        'bachma':[16.1969,107.8542], 'phu quoc':[10.2289, 103.9573], 'ho chi minh':[10.8231, 106.6297], 'saigon':[10.8231, 106.6297]
-    };
+    window.locationCache = {};
     window.pendingGeocodes = new Set();
+    window.geocodeQueue = window.geocodeQueue || [];
+    window.isGeocoding = window.isGeocoding || false;
+
+    async function processGeocodeQueue() {
+        if (window.isGeocoding || window.geocodeQueue.length === 0) return;
+        window.isGeocoding = true;
+        
+        const locName = window.geocodeQueue.shift();
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locName)}&limit=1`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+                window.locationCache[locName] = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                renderMap(); // Redraw map to show the new location
+            }
+        } catch(e) { console.warn("Geocoding failed for", locName); }
+        
+        setTimeout(() => {
+            window.isGeocoding = false;
+            processGeocodeQueue();
+        }, 1100);
+    }
 
     async function fetchCoordinates(locName) {
         if (!locName) return null;
@@ -843,17 +898,9 @@
 
         if (window.pendingGeocodes.has(cleanLoc)) return null;
         window.pendingGeocodes.add(cleanLoc);
-
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanLoc + " Vietnam")}&limit=1`);
-            const data = await res.json();
-            if (data && data.length > 0) {
-                const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-                window.locationCache[cleanLoc] = coords;
-                renderMap(); // Redraw map to show the new location
-                return coords;
-            }
-        } catch(e) { console.warn("Geocoding failed for", cleanLoc); }
+        window.geocodeQueue.push(cleanLoc);
+        
+        processGeocodeQueue();
         return null;
     }
 
@@ -887,18 +934,43 @@
         window.tripState.days.forEach((day, idx) => {
             const locName = day.enLoc || day.location || day.title || "";
             const cleanLoc = locName.trim().toLowerCase();
-            if (!cleanLoc) return;
-
-            let matchKey = Object.keys(window.locationCache).find(k => cleanLoc.includes(k));
-            if (matchKey) {
-                const coord = window.locationCache[matchKey];
-                polyCoords.push(coord);
-                const key = `${coord[0]},${coord[1]}`;
-                if(!groupedMarkers[key]) groupedMarkers[key] = { coord, days: [], firstDayId: day.id };
-                groupedMarkers[key].days.push(idx + 1);
-            } else {
-                fetchCoordinates(cleanLoc);
+            if (cleanLoc && cleanLoc !== "arrival") {
+                let matchKey = Object.keys(window.locationCache).find(k => cleanLoc.includes(k));
+                if (matchKey) {
+                    const coord = window.locationCache[matchKey];
+                    polyCoords.push(coord);
+                    const key = `${coord[0]},${coord[1]}`;
+                    if(!groupedMarkers[key]) groupedMarkers[key] = { coord, days: [], firstDayId: day.id };
+                    groupedMarkers[key].days.push(idx + 1);
+                } else {
+                    fetchCoordinates(cleanLoc);
+                }
             }
+
+            // Plot specific daily destinations (mainLinks)
+            day.mainLinks.forEach((link) => {
+                let linkName = link.t;
+                if (link.u && link.u.includes('query=')) {
+                    try { linkName = decodeURIComponent(link.u.split('query=')[1].split('&')[0]); } catch(e){}
+                }
+                if (day.enLoc && !linkName.toLowerCase().includes(day.enLoc.toLowerCase())) {
+                    linkName += " " + day.enLoc;
+                }
+                const cleanLinkLoc = linkName.trim().toLowerCase();
+                
+                let matchKeyLink = Object.keys(window.locationCache).find(k => cleanLinkLoc === k);
+                if (matchKeyLink) {
+                    const coord = window.locationCache[matchKeyLink];
+                    L.circleMarker(coord, { 
+                        radius: 5, fillColor: '#f59e0b', color: '#fff', weight: 1.5, fillOpacity: 0.9 
+                    }).bindTooltip(`יום ${idx+1}: ${link.t}`, {direction: 'top'}).addTo(mapLayerGroup).on('click', () => {
+                        const el = document.getElementById(`day-card-${day.id}`);
+                        if(el) el.scrollIntoView({ behavior: 'smooth' }); 
+                    });
+                } else if (cleanLinkLoc) {
+                    fetchCoordinates(cleanLinkLoc);
+                }
+            });
         });
 
         Object.values(groupedMarkers).forEach(group => {
@@ -973,14 +1045,15 @@
             const tipsHtml = day.tips.map((t, tIdx) => {
                 const searchName = t.en_title || t.title;
                 const destSuffix = day.enLoc ? ` ${day.enLoc}` : "";
-                const finalUrl = t.url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${searchName}${destSuffix} Vietnam`)}`;
+                const finalUrl = t.url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchName + destSuffix)}`;
                 return `
                 <div class="bg-indigo-50 border border-indigo-200 p-3 rounded-lg mt-2 flex flex-row-reverse justify-between items-center text-xs shadow-sm">
                     <span class="font-bold text-indigo-900">${t.emoji} ${t.title} <span class="text-[10px] text-gray-500 font-normal dir-ltr inline-block">(${t.en_title||''})</span></span>
                     <div class="flex items-center gap-2">
+                        ${t.menu_url ? `<a href="${t.menu_url}" target="_blank" class="text-indigo-600 font-bold underline hover:text-indigo-800 px-2">תפריט</a>` : ''}
                         <button onclick="window.openInIframe('${finalUrl.replace(/'/g, "\\'")}')" class="text-indigo-700 font-bold underline hover:text-indigo-900 px-2">מפה</button>
                         <button onclick="window.openEditTipModal('${day.id}', ${tIdx})" class="text-blue-500 hover:text-blue-700 bg-white p-1.5 rounded-md shadow-sm" title="ערוך"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
-                        <button onclick="window.openRelocateModal('${day.id}', 'tip', ${tIdx})" class="text-gray-500 hover:text-indigo-600 bg-white p-1.5 rounded-md shadow-sm" title="העבר"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></button>
+                        <button onclick="window.openRelocateModal('${day.id}', 'tip', ${tIdx})" class="text-gray-500 hover:text-indigo-600 bg-white p-1.5 rounded-md shadow-sm" title="ההעבר"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></button>
                         <button onclick="window.deleteTip('${day.id}', ${tIdx})" class="text-red-500 hover:text-red-700 bg-white p-1.5 rounded-md shadow-sm" title="מחק"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                     </div>
                 </div>`;
@@ -1008,7 +1081,12 @@
                     <button onclick="window.openDayLinksModal('${day.id}')" class="px-2 py-1 text-[10px] font-bold text-gray-400 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-full">+ ערוך יעדים</button>
                 </div>
                 
-                ${day.stay ? `<div class="bg-orange-50 p-2 rounded-lg text-xs my-2 border border-orange-200 text-orange-900 font-bold shadow-sm">🏨 ${day.stay}</div>` : ''}
+                ${day.stay ? `
+                    <div class="bg-orange-50 p-2 rounded-lg text-xs my-2 border border-orange-200 text-orange-900 font-bold shadow-sm flex justify-between items-center group cursor-pointer hover:bg-orange-100 transition-colors" onclick="window.openEditDayModal('${day.id}')" title="לחץ לעריכת המלון">
+                        <span>🏨 ${day.stay}</span>
+                        <span class="text-[10px] font-normal text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity">ערוך</span>
+                    </div>
+                ` : ''}
                 
                 <div class="mb-3">${optsHtml ? `<p class="text-xs font-bold text-gray-500 mb-2">אפשרויות מסלול (ניתן לבחור כמה):</p>${optsHtml}` : ''}</div>
                 <div>${tipsHtml}</div>
@@ -1016,8 +1094,8 @@
                 <div class="grid grid-cols-3 md:grid-cols-6 gap-2 mt-4 pt-3 border-t border-gray-100">
                     <button onclick="window.openAIGuide('${day.id}', 'tips')" class="text-[10px] font-bold text-indigo-800 py-2 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 shadow-sm flex justify-center items-center gap-1">✨ טיפים</button>
                     <button onclick="window.openAIGuide('${day.id}', 'food')" class="text-[10px] font-bold text-orange-800 py-2 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-100 shadow-sm flex justify-center items-center gap-1">🍜 אוכל מקומי</button>
+                    <button onclick="window.openAIGuide('${day.id}', 'hotels')" class="text-[10px] font-bold text-pink-800 py-2 bg-pink-50 border border-pink-200 rounded-xl hover:bg-pink-100 shadow-sm flex justify-center items-center gap-1">🏨 מלונות</button>
                     <button onclick="window.openAIGuide('${day.id}', 'options')" class="text-[10px] font-bold text-teal-800 py-2 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 shadow-sm flex justify-center items-center gap-1">🎯 AI אופציות</button>
-                    <button onclick="window.openAddManualOption('${day.id}')" class="text-[10px] font-bold text-gray-800 py-2 bg-gray-50 border border-gray-300 rounded-xl hover:bg-gray-100 shadow-sm flex justify-center items-center gap-1">✏️ הוסף ידנית</button>
                     <button onclick="window.openRouteModal('${day.id}')" class="text-[10px] font-bold text-blue-800 py-2 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 shadow-sm flex justify-center items-center gap-1">🗺️ נווט</button>
                     <button onclick="window.openReplanModal('${day.id}')" class="col-span-3 md:col-span-1 text-[10px] font-bold text-purple-800 py-2 bg-purple-50 border border-purple-200 rounded-xl hover:bg-purple-100 shadow-sm flex justify-center items-center gap-1">🤖 תכנן מחדש</button>
                 </div>
@@ -1126,7 +1204,7 @@
         const day = window.tripState.days.find(d => d.id === dayId);
         const dest = (day && day.enLoc) ? ` ${day.enLoc}` : "";
         
-        row.querySelector('.link-u').value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + dest + " Vietnam")}`;
+        row.querySelector('.link-u').value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + dest)}`;
     };
 
     window.saveDayLinks = () => {
@@ -1143,7 +1221,7 @@
             
             // Auto-fill logic if URL is empty
             if (!u && t) {
-                u = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t + dest + " Vietnam")}`;
+                u = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t + dest)}`;
             }
             
             if(t || u) newLinks.push({ t, u });
@@ -1245,7 +1323,7 @@
             if (day && day.enLoc) dest = ` ${day.enLoc}`;
         }
         
-        document.getElementById(targetId).value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + dest + " Vietnam")}`;
+        document.getElementById(targetId).value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + dest)}`;
     };
 
     window.saveEditedOption = () => {
@@ -1262,7 +1340,7 @@
         
         // Auto-fill logic
         if (!newU && (newT || newEnT)) {
-            newU = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((newEnT || newT) + dest + " Vietnam")}`;
+            newU = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((newEnT || newT) + dest)}`;
         }
 
         const newOpt = {
@@ -1329,6 +1407,7 @@
         document.getElementById('edit-tip-entitle').value = t.en_title || '';
         document.getElementById('edit-tip-text').value = t.text || '';
         document.getElementById('edit-tip-url').value = t.url || '';
+        document.getElementById('edit-tip-menu-url').value = t.menu_url || '';
         
         document.getElementById('edit-tip-modal').classList.remove('hidden');
     };
@@ -1349,7 +1428,7 @@
             
             // Auto-fill logic
             if (!newU && (newT || newEnT)) {
-                newU = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((newEnT || newT) + dest + " Vietnam")}`;
+                newU = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((newEnT || newT) + dest)}`;
             }
 
             day.tips[tipIdx].emoji = document.getElementById('edit-tip-emoji').value;
@@ -1357,6 +1436,7 @@
             day.tips[tipIdx].en_title = newEnT;
             day.tips[tipIdx].text = document.getElementById('edit-tip-text').value;
             day.tips[tipIdx].url = newU;
+            day.tips[tipIdx].menu_url = document.getElementById('edit-tip-menu-url').value.trim();
             
             renderApp();
             syncToCloud();
@@ -1364,27 +1444,30 @@
         }
     };
 
-    window.searchLocationStr = (type, enId, heId) => {
+    window.searchLocationStr = (type, enId, heId, specificDestContext = null) => {
         const enTitle = document.getElementById(enId).value.trim();
         const heTitle = document.getElementById(heId).value.trim();
         const name = enTitle || heTitle;
         
         if (!name) {
-            window.showAlert("שגיאה", "אנא הזן שם מקום לחיפוש בשדה האנגלית או העברית.");
+            window.showAlert("שגיאה", "אנא הזן שם מקום לחיפוש.");
             return;
         }
         
         let dayId = "";
-        if (enId === 'edit-opt-en-t') dayId = document.getElementById('edit-opt-dayidx').value;
-        else if (enId === 'edit-tip-entitle') dayId = document.getElementById('edit-tip-dayid').value;
+        let dest = specificDestContext ? ` ${specificDestContext}` : "";
         
-        let dest = "";
-        if (dayId) {
-            const day = window.tripState.days.find(d => d.id === dayId);
-            if (day && day.enLoc) dest = ` ${day.enLoc}`;
+        if (!specificDestContext) {
+            if (enId === 'edit-opt-en-t') dayId = document.getElementById('edit-opt-dayidx').value;
+            else if (enId === 'edit-tip-entitle') dayId = document.getElementById('edit-tip-dayid').value;
+            
+            if (dayId) {
+                const day = window.tripState.days.find(d => d.id === dayId);
+                if (day && day.enLoc) dest = ` ${day.enLoc}`;
+            }
         }
         
-        const query = encodeURIComponent(name + dest + " Vietnam");
+        const query = encodeURIComponent(name + dest);
         const url = type === 'maps' 
             ? `https://www.google.com/maps/search/?api=1&query=${query}`
             : `https://www.google.com/search?q=${query}`;
@@ -1397,15 +1480,43 @@
         const day = window.tripState.days.find(d => d.id === dayId);
         if(!day) return;
         const wps = [];
-        day.options.filter(o => day.selectedOptions.includes(o.id)).forEach(o => { if(o.en_t || o.t) wps.push(o.en_t || o.t); });
-        day.tips.forEach(t => { if(t.en_title || t.title) wps.push(t.en_title || t.title); });
         
-        const loc = day.enLoc || day.location || "Vietnam";
-        const daddr = encodeURIComponent(loc + " Vietnam");
-        const destSuffix = (loc && loc !== "Vietnam") ? ` ${loc}` : "";
-        const wpParam = wps.length > 0 ? encodeURIComponent(wps.map(w => w + destSuffix + " Vietnam").join('|')) : "";
-        let fullUrl = `https://www.google.com/maps/dir/?api=1&origin=${daddr}&destination=${daddr}`;
-        if (wpParam) fullUrl += `&waypoints=${wpParam}`;
+        day.mainLinks.forEach(l => {
+            let name = l.t;
+            if (l.u && l.u.includes('query=')) {
+                try { name = decodeURIComponent(l.u.split('query=')[1].split('&')[0]); } catch(e){}
+            }
+            if (name) wps.push(name);
+        });
+
+        day.options.filter(o => day.selectedOptions.includes(o.id)).forEach(o => { 
+            if(o.en_t || o.t) wps.push(o.en_t || o.t); 
+        });
+        
+        day.tips.forEach(t => { 
+            if(t.en_title || t.title) wps.push(t.en_title || t.title); 
+        });
+        
+        const loc = day.enLoc || day.location || "";
+        const destSuffix = loc ? ` ${loc}` : "";
+        
+        let origin = loc;
+        let destination = loc;
+        let waypointsParam = "";
+
+        if (wps.length === 1) {
+            destination = wps[0].toLowerCase().includes(loc.toLowerCase()) ? wps[0] : wps[0] + destSuffix;
+            origin = loc || destination;
+        } else if (wps.length > 1) {
+            const preciseWps = wps.map(w => w.toLowerCase().includes(loc.toLowerCase()) ? w : w + destSuffix);
+            origin = preciseWps[0];
+            destination = preciseWps[preciseWps.length - 1];
+            if (preciseWps.length > 2) {
+                waypointsParam = "&waypoints=" + encodeURIComponent(preciseWps.slice(1, -1).join('|'));
+            }
+        }
+        
+        let fullUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}${waypointsParam}`;
 
         document.getElementById('route-modal-url').value = fullUrl;
         document.getElementById('route-modal').classList.remove('hidden');
@@ -1421,7 +1532,7 @@
     const sanitizeMapUrl = (url, name, dayEnLoc) => {
         if (!url || url.includes('goo.gl') || url.includes('maps.app.goo.gl') || !url.startsWith('http')) {
             const dest = dayEnLoc ? ` ${dayEnLoc}` : "";
-            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((name || '') + dest + " Vietnam")}`;
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((name || '') + dest)}`;
         }
         return url;
     };
@@ -1444,7 +1555,7 @@
 
     window.openAIGuide = async (dayId, mode) => {
         const day = window.tripState.days.find(d => d.id === dayId);
-        const modeLabels = { 'options': 'אפשרויות', 'tips': 'טיפים', 'food': 'אוכל מקומי' };
+        const modeLabels = { 'options': 'אפשרויות', 'tips': 'טיפים', 'food': 'אוכל מקומי', 'hotels': 'מלונות' };
         document.getElementById('active-provider-label').innerText = `AI - ${modeLabels[mode] || 'המלצות'}`;
         document.getElementById('ai-overlay').classList.add('open');
         document.getElementById('ai-loading').classList.remove('hidden'); document.getElementById('ai-results').classList.add('hidden'); document.getElementById('ai-error-box').classList.add('hidden');
@@ -1452,6 +1563,7 @@
         
         let promptTemplate = mode === 'options' ? (window.customPrompts?.options || defaultOptionsPrompt) : 
                              mode === 'food' ? (window.customPrompts?.food || defaultFoodPrompt) :
+                             mode === 'hotels' ? (window.customPrompts?.hotels || defaultHotelsPrompt) :
                              (window.customPrompts?.tips || defaultTipsPrompt);
                              
         let prompt = promptTemplate.replace(/<שם_באנגלית>|<English name>/g, day.enLoc || "").replace(/<יעד>/g, day.title).replace(/<מוצא>/g, "").replace(/<תאריך>/g, "").replace(/<תיאור>/g, day.desc).replace(/<מיקומים_מרכזיים>/g, day.mainLinks.map(l=>l.t).join(','));
@@ -1474,11 +1586,12 @@
                     </div>`).join('');
             } else if (mode === 'food') {
                 window.currentAITips = (result.food || []).map(f => ({
-                    title: f.dish,
-                    en_title: f.en_dish || f.dish,
-                    emoji: '🍜',
+                    title: f.restaurant ? `${f.dish} ב-${f.restaurant}` : f.dish,
+                    en_title: f.en_restaurant ? `${f.en_dish} at ${f.en_restaurant}` : (f.en_dish || f.dish),
+                    emoji: '🍽️',
                     text: f.desc,
-                    url: sanitizeMapUrl('', f.en_dish || f.dish, day.enLoc)
+                    url: sanitizeMapUrl('', f.en_restaurant || f.restaurant || f.en_dish || f.dish, day.enLoc),
+                    menu_url: f.menu_url || ""
                 }));
                 window.currentAIDayIndex = dayId;
                 document.getElementById('ai-results').innerHTML = `<h4 class="font-bold text-lg mb-4 text-orange-800">המלצות קולינריות - ${day.enLoc || day.title}</h4>` + window.currentAITips.map((t, i) => {
@@ -1487,11 +1600,27 @@
                         <div class="flex flex-row-reverse justify-between items-center mb-2">
                             <span class="font-bold text-orange-900 text-sm">${t.emoji} ${t.title} <span class="text-[10px] text-gray-500 font-normal dir-ltr inline-block">(${t.en_title||''})</span></span>
                             <div class="flex items-center gap-2">
-                                <button onclick="window.openInIframe('${t.url.replace(/'/g, "\\'")}')" class="text-orange-700 font-bold underline hover:text-orange-900 px-2 text-xs">חפש</button>
+                                ${t.menu_url ? `<a href="${t.menu_url}" target="_blank" class="text-orange-600 font-bold underline hover:text-orange-800 px-2 text-xs">תפריט</a>` : ''}
+                                <button onclick="window.openInIframe('${t.url.replace(/'/g, "\\'")}')" class="text-orange-700 font-bold underline hover:text-orange-900 px-2 text-xs">מפה</button>
                                 <button onclick="window.saveTip(${i}, this)" class="bg-orange-100 text-orange-800 px-3 py-1.5 rounded-full text-[10px] font-bold hover:bg-orange-200">⭐ שמור כטיפ</button>
                             </div>
                         </div>
                         <p class="text-xs text-gray-600 leading-relaxed">${t.text}</p>
+                    </div>`;
+                }).join('');
+            } else if (mode === 'hotels') {
+                const hotels = result.hotels || [];
+                window.currentAIDayIndex = dayId;
+                document.getElementById('ai-results').innerHTML = `<h4 class="font-bold text-lg mb-4 text-pink-800">המלצות לינה - ${day.enLoc || day.title}</h4>` + hotels.map((h, i) => {
+                    const safeUrl = sanitizeMapUrl(h.url, h.en_name || h.name, day.enLoc).replace(/'/g, "\\'");
+                    return `
+                    <div class="bg-pink-50 border border-pink-200 p-4 rounded-xl mt-3 shadow-sm text-right">
+                        <h5 class="font-bold text-pink-900 text-sm mb-1">🏨 ${h.name} <span class="text-[10px] text-gray-500 font-normal dir-ltr inline-block">(${h.en_name || ''})</span></h5>
+                        <p class="text-xs text-gray-600 leading-relaxed mb-3">${h.desc}</p>
+                        <div class="flex flex-row-reverse justify-between items-center">
+                            <button onclick="window.openInIframe('${safeUrl}')" class="text-pink-700 font-bold underline hover:text-pink-900 text-xs px-2">בדוק במפה</button>
+                            <button onclick="window.saveHotelSuggestion('${day.id}', '${(h.name || '').replace(/'/g, "\\'")}')" class="bg-pink-100 text-pink-800 px-3 py-1.5 rounded-full text-[10px] font-bold hover:bg-pink-200">✅ קבע כמלון שלי</button>
+                        </div>
                     </div>`;
                 }).join('');
             } else {
@@ -1515,7 +1644,7 @@
                 }).join('');
             }
             document.getElementById('ai-loading').classList.add('hidden'); document.getElementById('ai-results').classList.remove('hidden');
-        } catch(e) { document.getElementById('error-content').innerText = JSON.stringify(e, null, 2); document.getElementById('ai-error-box').classList.remove('hidden'); document.getElementById('ai-loading').classList.add('hidden'); }
+        } catch(e) { const msg = e instanceof Error ? e.message : (typeof e === 'object' ? JSON.stringify(e, null, 2) : String(e)); document.getElementById('error-content').innerText = msg; document.getElementById('ai-error-box').classList.remove('hidden'); document.getElementById('ai-loading').classList.add('hidden'); }
     };
 
     window.saveGeneratedOption = (idx, btn) => {
@@ -1527,13 +1656,23 @@
         btn.innerText = "✅ הוסף"; btn.disabled = true; btn.classList.add('opacity-50');
     };
 
+    window.saveHotelSuggestion = (dayId, hotelName) => {
+        const day = window.tripState.days.find(d => d.id === dayId);
+        if(day) {
+            day.stay = hotelName;
+            renderApp(); syncToCloud();
+            window.closeAIPanel();
+        }
+    };
+
     // --- New AI Planner Functions ---
     window.openMultiDayPlannerModal = () => document.getElementById('ai-planner-modal').classList.remove('hidden');
     
     window.runMultiDayAI = async () => {
-        const origin = document.getElementById('ai-plan-origin').value || "Hanoi";
+        const origin = document.getElementById('ai-plan-origin').value || "Paris";
         const daysNum = document.getElementById('ai-plan-days').value || 3;
         const vibe = document.getElementById('ai-plan-vibe').value || "";
+        const distance = document.getElementById('ai-plan-distance').value || "10 km";
         document.getElementById('ai-planner-modal').classList.add('hidden');
         
         document.getElementById('active-provider-label').innerText = `AI - בניית מסלול`;
@@ -1542,7 +1681,7 @@
         document.getElementById('ai-loading-text').innerText = `מתכנן מסלול של ${daysNum} ימים... זה עשוי לקחת קצת זמן.`;
 
         let rawMultiPromptTemplate = window.customPrompts?.multiday || multiDayAIPrompt;
-        let prompt = rawMultiPromptTemplate.replace('<NUM_DAYS>', daysNum).replace('<ORIGIN>', origin).replace('<VIBE>', vibe);
+        let prompt = rawMultiPromptTemplate.replace('<NUM_DAYS>', daysNum).replace('<ORIGIN>', origin).replace('<VIBE>', vibe).replace('<DISTANCE>', distance);
         
         try {
             const res = await execAI(prompt, "Return valid JSON exactly as requested.");
@@ -1562,7 +1701,7 @@
                 { text: 'ביטול', colorClass: 'bg-gray-200 text-gray-700' }
             ]);
 
-        } catch(e) { document.getElementById('error-content').innerText = JSON.stringify(e, null, 2); document.getElementById('ai-error-box').classList.remove('hidden'); document.getElementById('ai-loading').classList.add('hidden'); }
+        } catch(e) { const msg = e instanceof Error ? e.message : (typeof e === 'object' ? JSON.stringify(e, null, 2) : String(e)); document.getElementById('error-content').innerText = msg; document.getElementById('ai-error-box').classList.remove('hidden'); document.getElementById('ai-loading').classList.add('hidden'); }
     };
 
     window.openReplanModal = (dayId) => {
@@ -1574,6 +1713,7 @@
     window.runSingleDayReplan = async () => {
         const dayId = document.getElementById('replan-day-id').value;
         const req = document.getElementById('ai-replan-req').value;
+        const distance = document.getElementById('ai-replan-distance').value || "10 km";
         document.getElementById('ai-replan-modal').classList.add('hidden');
         
         const idx = window.tripState.days.findIndex(d => d.id === dayId);
@@ -1586,7 +1726,7 @@
         document.getElementById('ai-loading').classList.remove('hidden'); document.getElementById('ai-results').classList.add('hidden'); document.getElementById('ai-error-box').classList.add('hidden');
         document.getElementById('ai-loading-text').innerText = `מתכנן מחדש את ${day.title}...`;
 
-        let prompt = singleDayReplanPrompt.replace(/<שם_באנגלית>/g, day.enLoc||"Vietnam").replace(/<יעד>/g, day.title).replace('<YESTERDAY>', yest).replace('<TOMORROW>', tom).replace('<REQUEST>', req);
+        let prompt = singleDayReplanPrompt.replace(/<שם_באנגלית>/g, day.enLoc||"Destination").replace(/<יעד>/g, day.title).replace('<YESTERDAY>', yest).replace('<TOMORROW>', tom).replace('<REQUEST>', req).replace('<DISTANCE>', distance);
         
         try {
             const res = await execAI(prompt, "Return valid JSON exactly as requested.");
@@ -1602,7 +1742,7 @@
             renderApp(); syncToCloud();
             window.showAlert("הושלם בהצלחה", "היום תוכנן מחדש בהתאם לבקשתך. הטיפים האישיים שלך נשמרו.");
 
-        } catch(e) { document.getElementById('error-content').innerText = JSON.stringify(e, null, 2); document.getElementById('ai-error-box').classList.remove('hidden'); document.getElementById('ai-loading').classList.add('hidden'); }
+        } catch(e) { const msg = e instanceof Error ? e.message : (typeof e === 'object' ? JSON.stringify(e, null, 2) : String(e)); document.getElementById('error-content').innerText = msg; document.getElementById('ai-error-box').classList.remove('hidden'); document.getElementById('ai-loading').classList.add('hidden'); }
     };
 
     // Resizer Logic
