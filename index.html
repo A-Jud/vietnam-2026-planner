@@ -663,7 +663,8 @@
     const FOLDER_NAME = "My Trip Planner";
     const FILE_NAME = "trip_data.json";
 
-    // AI Prompts Setup - Generalized
+// Prompts
+    // AI Generlized Prompt
     const defaultTipsPrompt = `Trip context: International Travel.
 Task: Suggest 2 hidden gems, attractions, or viewpoints for the current location.
 Current Location (English): <שם_באנגלית>
@@ -677,18 +678,34 @@ RULE 1 — STRICT RADIUS:
 All suggestions MUST be physically located EXACTLY IN or within a 1-hour drive of <שם_באנגלית>.
 Do NOT suggest places outside this specific region.
 
-RULE 2 — NO FOOD/RESTAURANTS:
+RULE 2 — REAL PLACES ONLY:
+Suggest only real, specific, currently active attractions, viewpoints, parks, neighborhoods, temples, beaches, markets, museums, or scenic spots.
+Do NOT invent places.
+If you are uncertain a place is real or still accessible, EXCLUDE it.
+
+RULE 3 — NO FOOD/RESTAURANTS:
 Do NOT suggest cafes, restaurants, or food-only venues.
 
-RULE 3 — MAP URL ACCURACY:
+RULE 4 — MAP URL ACCURACY:
 The 'url' field MUST use the exact English name PLUS the city/province name PLUS the country.
 Format: https://www.google.com/maps/search/?api=1&query=Exact+Place+Name+CityName+CountryName
+Do NOT use short links or vague queries.
 
 ═══════════════════════════════════════════════
 OUTPUT REQUIREMENTS
 ═══════════════════════════════════════════════
 1. Output in Hebrew.
 2. JSON ONLY, following the exact structure below.
+3. Return exactly 2 suggestions.
+4. Each suggestion must be meaningfully different from the other.
+
+═══════════════════════════════════════════════
+SELF-CHECK BEFORE OUTPUTTING
+═══════════════════════════════════════════════
+✅ Is each place real and specific?
+✅ Is each place within the allowed radius?
+✅ Is each URL a full Google Maps search URL with exact place name + city/province + country?
+✅ Are both suggestions non-food related?
 
 ═══════════════════════════════════════════════
 OUTPUT FORMAT
@@ -705,7 +722,7 @@ OUTPUT FORMAT
  ]
 }`;
 
-    const defaultOptionsPrompt = `Trip context: International Travel.
+const defaultOptionsPrompt = `Trip context: International Travel.
 Task: Generate exactly 3 different daily activity options for the current location.
 Current Location (English): <שם_באנגלית>
 [Optional] Destination (Hebrew): <יעד>
@@ -717,9 +734,17 @@ GEOGRAPHIC RULES — STRICTLY ENFORCED
 RULE 1 — STRICT RADIUS:
 All activities MUST be physically located EXACTLY IN or within a practical day-trip distance (max 1.5 hours) from <שם_באנגלית>.
 
-RULE 2 — MAP URL ACCURACY:
+RULE 2 — REAL PLACES ONLY:
+Suggest only real, specific attractions, neighborhoods, routes, parks, museums, beaches, temples, viewpoints, or local experiences.
+Do NOT invent places or use vague generic labels unless tied to a real place.
+
+RULE 3 — DIVERSITY:
+The 3 activities must be clearly different from each other and not minor variations of the same idea.
+
+RULE 4 — MAP URL ACCURACY:
 The 'u' field MUST use the exact English title PLUS the city/province name PLUS the country.
 Format: https://www.google.com/maps/search/?api=1&query=Exact+Place+Name+CityName+CountryName
+Do NOT use short links or vague queries.
 
 ═══════════════════════════════════════════════
 OUTPUT REQUIREMENTS
@@ -727,6 +752,16 @@ OUTPUT REQUIREMENTS
 1. Ensure logistical feasibility.
 2. Output in Hebrew.
 3. JSON ONLY, following the exact structure below.
+4. Return exactly 3 options.
+
+═══════════════════════════════════════════════
+SELF-CHECK BEFORE OUTPUTTING
+═══════════════════════════════════════════════
+✅ Are there exactly 3 options?
+✅ Is every activity within the allowed radius?
+✅ Is every option a real place or concrete area?
+✅ Are the 3 options distinct from each other?
+✅ Is every URL a full Google Maps search URL with exact place name + city/province + country?
 
 ═══════════════════════════════════════════════
 OUTPUT FORMAT
@@ -742,7 +777,7 @@ OUTPUT FORMAT
  ]
 }`;
 
-    const defaultFoodPrompt = `Trip context: International Travel.
+const defaultFoodPrompt = `Trip context: International Travel.
 Current Location (English): <LOCATION_EN>
 [Optional] Destination (Hebrew): <DESTINATION_HE>
 
@@ -841,7 +876,7 @@ Output in Hebrew. JSON ONLY, exactly in this format:
  ]
 }`;
 
-    const defaultHotelsPrompt = `Trip context: International Travel.
+const defaultHotelsPrompt = `Trip context: International Travel.
 Task: Suggest 3 highly-rated, currently active hotels or distinct neighborhoods to stay in.
 Current Location (English): <שם_באנגלית>
 [Optional] Destination (Hebrew): <יעד>
@@ -853,18 +888,33 @@ GEOGRAPHIC RULES — STRICTLY ENFORCED
 RULE 1 — STRICT LOCATION:
 Ensure the hotels/areas are located EXACTLY IN or very close to <שם_באנגלית>.
 
-RULE 2 — DIVERSITY:
+RULE 2 — REAL & ACTIVE ONLY:
+Suggest only real, currently active hotels or real, commonly recommended neighborhoods/areas.
+Do NOT invent hotel names or vague stay areas.
+If uncertain, exclude the suggestion.
+
+RULE 3 — DIVERSITY:
 Provide different options (e.g., luxury, budget, family-friendly, specific neighborhood).
 
-RULE 3 — MAP URL ACCURACY:
+RULE 4 — MAP URL ACCURACY:
 The 'url' field MUST use the exact English name PLUS the city/province name PLUS the country.
 Format: https://www.google.com/maps/search/?api=1&query=English+Hotel+Name+CityName+CountryName
+Do NOT use short links or vague queries.
 
 ═══════════════════════════════════════════════
 OUTPUT REQUIREMENTS
 ═══════════════════════════════════════════════
 1. Output in Hebrew.
 2. JSON ONLY, following the exact structure below.
+3. Return exactly 3 suggestions.
+
+═══════════════════════════════════════════════
+SELF-CHECK BEFORE OUTPUTTING
+═══════════════════════════════════════════════
+✅ Is each hotel/area real?
+✅ Is each hotel/area located in or very close to <שם_באנגלית>?
+✅ Are the 3 suggestions usefully different?
+✅ Is every URL a full Google Maps search URL with exact English name + city/province + country?
 
 ═══════════════════════════════════════════════
 OUTPUT FORMAT
@@ -880,7 +930,7 @@ OUTPUT FORMAT
  ]
 }`;
 
-    const defaultProvidersPrompt = `Trip context: International Travel.
+const defaultProvidersPrompt = `Trip context: International Travel.
 Current Location (English): <LOCATION_EN>
 [Optional] Destination (Hebrew): <DESTINATION_HE>
 [Optional] Service Type Filter: <SERVICE_TYPE> (e.g., Tour Guide, Cooking Class,
@@ -1020,7 +1070,7 @@ JSON ONLY, exactly in this format:
  ]
 }`;
 
-    const tripTransportPrompt = `Trip context: International Travel.
+const tripTransportPrompt = `Trip context: International Travel.
 Task: Analyze the user's FULL ITINERARY and suggest the OPTIMAL transportation
 between cities for every meaningful location transition.
 
@@ -1067,12 +1117,9 @@ country/region, then recommend the BEST one and list alternatives:
 
 RULE 3 — CORRECT DAY INDEX MAPPING:
   - Use 0-based dayIdx: Day 1 of the itinerary = dayIdx 0.
-  - The transport entry's dayIdx = the day the traveler DEPARTS (i.e., the
-    morning/day they leave the previous destination).
+  - The transport entry's dayIdx must match the arrival day.
   - Example: Moving from Paris (Day 2, dayIdx 1) to Lyon (Day 3, dayIdx 2)
     → transport entry gets dayIdx 2.
-  - Double-check: the dayIdx in your output must match the arrival day,
-    not the departure day from origin.
 
 RULE 4 — BOOKING URL QUALITY:
   - Provide a 'url' that is as specific as possible for that route:
@@ -1082,7 +1129,7 @@ RULE 4 — BOOKING URL QUALITY:
       3. Never use homepage-only URLs (e.g., just "https://www.rome2rio.com").
   - Preferred URL patterns by region:
       - Southeast Asia trains/buses: https://12go.asia/en/travel/{origin}/{destination}
-      - Europe rail: https://www.omio.com (search URL with params)
+      - Europe rail: https://www.omio.com
       - Japan: https://www.hyperdia.com or https://japanrailpass.net
       - Flights (general): https://www.google.com/travel/flights/search?tfs=...
         or https://www.skyscanner.net/transport/flights/{IATA1}/{IATA2}/
@@ -1139,7 +1186,7 @@ Output in Hebrew. JSON ONLY, exactly in this format:
  ]
 }`;
 
-    const multiDayAIPrompt = `Trip context: International Travel.
+const multiDayAIPrompt = `Trip context: International Travel.
 Task: Generate a <NUM_DAYS>-day itinerary starting from <ORIGIN>.
 Style/Preferences: <VIBE>
 
@@ -1164,13 +1211,18 @@ RULE 3 — WITHIN-COUNTRY/REGION ONLY:
 All destinations MUST stay within the target country/region implied by <ORIGIN>
 and <VIBE>. Do NOT suggest cross-border destinations unless explicitly requested.
 
-RULE 4 — OPTIONS AND MAINLINKS RADIUS VALIDATION:
+RULE 4 — REAL PLACES ONLY:
+Use only real cities, neighborhoods, attractions, hotels, and activities.
+Do NOT invent places.
+If uncertain whether a place is real or active, EXCLUDE it.
+
+RULE 5 — OPTIONS AND MAINLINKS RADIUS VALIDATION:
 For every entry in both 'options' and 'mainLinks':
 - Verify the place is physically located within <DISTANCE> of that day's
   primary destination city before including it.
 - If you are uncertain whether a place falls within the radius, EXCLUDE it.
 
-RULE 5 — MAP URL ACCURACY:
+RULE 6 — MAP URL ACCURACY:
 The 'u' field in EVERY mainLinks and options entry MUST use:
   - The exact English name of the place
   - PLUS the daily destination city/province name PLUS the country
@@ -1228,7 +1280,7 @@ OUTPUT FORMAT
  ]
 }`;
 
-    const improveMultiDayAIPrompt = `Trip context: International Travel.
+const improveMultiDayAIPrompt = `Trip context: International Travel.
 Task: Improve and enhance the user's CURRENT ITINERARY based on their feedback.
 Feedback/Style/Preferences: <VIBE>
 
@@ -1248,12 +1300,17 @@ RULE 2 — LOGICAL DAILY PROGRESSION:
 Each subsequent day's destination must be reachable from the PREVIOUS day's
 destination within a reasonable travel time.
 
-RULE 3 — OPTIONS AND MAINLINKS RADIUS VALIDATION:
+RULE 3 — REAL PLACES ONLY:
+Use only real cities, neighborhoods, attractions, hotels, and activities.
+Do NOT invent places.
+If uncertain whether a place is real or active, EXCLUDE it.
+
+RULE 4 — OPTIONS AND MAINLINKS RADIUS VALIDATION:
 For every entry in both 'options' and 'mainLinks':
 - Verify the place is physically located within <DISTANCE> of that day's
   primary destination city before including it.
 
-RULE 4 — MAP URL ACCURACY:
+RULE 5 — MAP URL ACCURACY:
 The 'u' field in EVERY mainLinks and options entry MUST use:
   - The exact English name of the place
   - PLUS the daily destination city/province name PLUS the country
@@ -1266,6 +1323,15 @@ OUTPUT REQUIREMENTS
 2. Keep the general structural flow but upgrade 'desc', add better 'mainLinks', and improve 'options' based on the feedback.
 3. For EVERY significant attraction, neighborhood, or specific place mentioned in 'desc', you MUST create a corresponding entry in the 'mainLinks' array.
 4. Output in Hebrew. JSON ONLY, following the exact same structure as a new route.
+
+═══════════════════════════════════════════════
+SELF-CHECK BEFORE OUTPUTTING
+═══════════════════════════════════════════════
+✅ Same number of days as the original itinerary
+✅ All updated places are real and geographically valid
+✅ All named places in 'desc' appear in 'mainLinks'
+✅ All 'options' remain within <DISTANCE>
+✅ All map URLs use exact English place name + city/province + country
 
 ═══════════════════════════════════════════════
 OUTPUT FORMAT
@@ -1295,7 +1361,7 @@ OUTPUT FORMAT
  ]
 }`;
 
-    const singleDayReplanPrompt = `Trip context: International Travel.
+const singleDayReplanPrompt = `Trip context: International Travel.
 Task: Completely replan the single day for the destination.
 Destination (English): <שם_באנגלית>
 Destination (Hebrew): <יעד>
@@ -1308,7 +1374,15 @@ GEOGRAPHIC RULES — STRICTLY ENFORCED
 RULE 1 — STRICT RADIUS:
 Everything MUST be physically located EXACTLY IN or within <DISTANCE> of <שם_באנגלית>.
 
-RULE 2 — MAP URL ACCURACY:
+RULE 2 — REAL PLACES ONLY:
+Use only real attractions, neighborhoods, routes, hotels, and activities.
+Do NOT invent places.
+If uncertain whether a place is real or still active, EXCLUDE it.
+
+RULE 3 — LOGICAL FIT:
+The replanned day must still make sense geographically between <YESTERDAY> and <TOMORROW>.
+
+RULE 4 — MAP URL ACCURACY:
 The 'u' field in EVERY mainLinks and options entry MUST query the exact English name PLUS <שם_באנגלית> PLUS the country.
 Format: https://www.google.com/maps/search/?api=1&query=Exact+Place+Name+CityName+CountryName
 
@@ -1319,6 +1393,15 @@ OUTPUT REQUIREMENTS
 2. For 'options', provide an accurate descriptive name in both Hebrew ('t') and English ('en_t').
 3. Output in Hebrew.
 4. JSON ONLY, following the exact structure below.
+
+═══════════════════════════════════════════════
+SELF-CHECK BEFORE OUTPUTTING
+═══════════════════════════════════════════════
+✅ Are all places within <DISTANCE> of <שם_באנגלית>?
+✅ Are all places real and specific?
+✅ Does every named place in 'desc' appear in 'mainLinks'?
+✅ Do all map URLs use exact English place name + city + country?
+✅ Does the day still fit logically between <YESTERDAY> and <TOMORROW>?
 
 ═══════════════════════════════════════════════
 OUTPUT FORMAT
@@ -3250,3 +3333,4 @@ OUTPUT FORMAT
 </script>
 </body>
 </html>
+
