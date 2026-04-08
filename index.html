@@ -71,6 +71,10 @@
                     <button onclick="App.closeRouteIframe()" class="text-white hover:bg-indigo-700 px-3 py-1 rounded-lg text-xs font-bold transition-colors">✕ סגור</button>
                 </div>
             </div>
+            <div id="route-compare-toggle" class="hidden flex shrink-0 border-b border-gray-200 bg-gray-50 text-xs font-bold">
+                <button id="route-toggle-current" onclick="App.switchRouteVersion('current')" class="flex-1 px-4 py-2.5 text-indigo-700 border-b-2 border-indigo-600 bg-indigo-50 transition-all">🔵 מסלול נוכחי</button>
+                <button id="route-toggle-history" onclick="App.switchRouteVersion('history')" class="flex-1 px-4 py-2.5 text-gray-500 border-b-2 border-transparent hover:bg-gray-100 transition-all">🟢 גרסת עבר</button>
+            </div>
             <iframe id="route-iframe" class="flex-1 w-full border-none" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" allowfullscreen></iframe>
         </div>
 
@@ -549,6 +553,9 @@
         <h2 class="text-lg font-bold mb-2 text-gray-800 flex items-center gap-2"><span>🗺️</span> מסלול ניווט יומי</h2>
         <p class="text-xs text-gray-600 mb-5 leading-relaxed">המסלול כולל את היעדים המרכזיים, אפשרויות והמלצות שבחרת.</p>
         <input type="hidden" id="route-modal-url">
+        <div id="route-modal-compare-note" class="hidden bg-teal-50 border border-teal-200 rounded-xl p-3 mb-3 text-xs text-teal-800 font-bold text-center">
+            📊 השוואת גרסאות פעילה — תוכל לעבור בין המסלול הנוכחי לגרסת העבר
+        </div>
         <div class="flex flex-col gap-3">
             <button onclick="App.handleRouteAction('iframe')" class="w-full py-3 font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md">הצג מסלול בתוך האפליקציה</button>
             <button onclick="App.handleRouteAction('browser')" class="w-full py-3 font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors shadow-sm">העתק ופתח בדפדפן (לנייד)</button>
@@ -1440,7 +1447,7 @@ OUTPUT FORMAT
                 tripName: data.tripState?.tripName || "",
                 tripContext: data.tripState?.tripContext || "", 
                 startDate: data.tripState?.startDate || new Date().toISOString().slice(0, 10),
-                history: [],
+                history: data.tripState?.history || [],
                 days: []
             };
             if (data.tripState && Array.isArray(data.tripState.days)) {
@@ -1458,7 +1465,8 @@ OUTPUT FORMAT
         }
         
         State.tripState.tripContext = State.tripState.tripContext || "";
-        
+        State.tripState.history = State.tripState.history || [];
+
         State.tripState.days.forEach(d => {
             if(!d.providers) d.providers = [];
             if(d.transport === undefined) d.transport = null;
@@ -2443,7 +2451,7 @@ OUTPUT FORMAT
         const day = State.tripState.days.find(d => d.id === AIState.currentDayIndex);
         if(!day) return;
         if(!day.tips) day.tips = [];
-        
+        saveToHistory();
         day.tips.push(tip);
         renderApp();
         syncToCloud();
@@ -2515,7 +2523,7 @@ OUTPUT FORMAT
         const day = State.tripState.days.find(d => d.id === AIState.currentDayIndex);
         if(!day) return;
         if(!day.providers) day.providers = [];
-        
+        saveToHistory();
         day.providers.push(prov);
         renderApp();
         syncToCloud();
@@ -2649,33 +2657,25 @@ OUTPUT FORMAT
     }
 
     // --- AI Orchestration ---
-    function openRouteModal(dayId) {
-        const day = State.tripState.days.find(d => d.id === dayId);
-        if(!day) return;
+    function buildRouteUrlForDay(day) {
         const wps = [];
-        
-        day.mainLinks.forEach(l => {
+        (day.mainLinks || []).forEach(l => {
             let name = l.t;
             if (l.u && l.u.includes('query=')) {
                 try { name = decodeURIComponent(l.u.split('query=')[1].split('&')[0]); } catch(e){}
             }
             if (name) wps.push(name);
         });
+        (day.options || []).filter(o => (day.selectedOptions || []).includes(o.id)).forEach(o => {
+            if(o.en_t || o.t) wps.push(o.en_t || o.t);
+        });
+        (day.tips || []).forEach(t => {
+            if(t.en_title || t.title) wps.push(t.en_title || t.title);
+        });
 
-        day.options.filter(o => day.selectedOptions.includes(o.id)).forEach(o => { 
-            if(o.en_t || o.t) wps.push(o.en_t || o.t); 
-        });
-        
-        day.tips.forEach(t => { 
-            if(t.en_title || t.title) wps.push(t.en_title || t.title); 
-        });
-        
         const loc = day.enLoc || day.location || "";
         const destSuffix = getDestSuffix(loc);
-        
-        let origin = loc;
-        let destination = loc;
-        let waypointsParam = "";
+        let origin = loc, destination = loc, waypointsParam = "";
 
         if (wps.length === 1) {
             destination = wps[0].toLowerCase().includes(loc.toLowerCase()) ? wps[0] : wps[0] + destSuffix;
@@ -2688,10 +2688,21 @@ OUTPUT FORMAT
                 waypointsParam = "&waypoints=" + encodeURIComponent(preciseWps.slice(1, -1).join('|'));
             }
         }
-        
-        let fullUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}${waypointsParam}`;
+        return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}${waypointsParam}`;
+    }
 
+    function openRouteModal(dayId) {
+        const day = State.tripState.days.find(d => d.id === dayId);
+        if(!day) return;
+        const fullUrl = buildRouteUrlForDay(day);
         document.getElementById('route-modal-url').value = fullUrl;
+        document.getElementById('route-modal-url').dataset.dayIdx = String(State.tripState.days.indexOf(day));
+
+        // Check if any comparison is active for this day
+        const dayIdx = State.tripState.days.indexOf(day);
+        const hasComparison = getHistoricalDayData(dayIdx) !== null;
+        document.getElementById('route-modal-compare-note').classList.toggle('hidden', !hasComparison);
+
         document.getElementById('route-modal').classList.remove('hidden');
     }
 
@@ -2708,16 +2719,47 @@ OUTPUT FORMAT
         } catch(e) { return dirUrl; }
     }
 
+    function getHistoricalDayData(dayIdx) {
+        // Day-level comparison
+        if (State.compareHistoryDayItem && State.focusedDayIdx === dayIdx) {
+            return State.compareHistoryDayItem.dayData;
+        }
+        // Trip-level comparison
+        if (State.compareHistoryItem && State.compareHistoryItem.days && State.compareHistoryItem.days[dayIdx]) {
+            return State.compareHistoryItem.days[dayIdx];
+        }
+        return null;
+    }
+
     let currentRouteUrl = '';
+    let historyRouteUrl = '';
 
     function closeRouteIframe() {
         document.getElementById('route-iframe-panel').classList.add('hidden');
+        document.getElementById('route-compare-toggle').classList.add('hidden');
         document.getElementById('route-iframe').src = '';
         currentRouteUrl = '';
+        historyRouteUrl = '';
     }
 
     function openRouteInNewTab() {
         if (currentRouteUrl) window.open(currentRouteUrl, '_blank');
+    }
+
+    function switchRouteVersion(version) {
+        const url = version === 'history' ? historyRouteUrl : currentRouteUrl;
+        if (!url) return;
+        // Update active tab styling
+        const currentBtn = document.getElementById('route-toggle-current');
+        const historyBtn = document.getElementById('route-toggle-history');
+        if (version === 'history') {
+            historyBtn.className = 'flex-1 px-4 py-2.5 text-teal-700 border-b-2 border-teal-600 bg-teal-50 transition-all';
+            currentBtn.className = 'flex-1 px-4 py-2.5 text-gray-500 border-b-2 border-transparent hover:bg-gray-100 transition-all';
+        } else {
+            currentBtn.className = 'flex-1 px-4 py-2.5 text-indigo-700 border-b-2 border-indigo-600 bg-indigo-50 transition-all';
+            historyBtn.className = 'flex-1 px-4 py-2.5 text-gray-500 border-b-2 border-transparent hover:bg-gray-100 transition-all';
+        }
+        document.getElementById('route-iframe').src = toGoogleMapsEmbedUrl(url);
     }
 
     async function handleRouteAction(action) {
@@ -2728,8 +2770,18 @@ OUTPUT FORMAT
             window.open(url, '_blank');
         } else if (action === 'iframe') {
             currentRouteUrl = url;
-            const embedUrl = toGoogleMapsEmbedUrl(url);
-            document.getElementById('route-iframe').src = embedUrl;
+            // Check for active comparison (day-level or trip-level)
+            const dayIdx = parseInt(document.getElementById('route-modal-url').dataset.dayIdx);
+            const histDay = getHistoricalDayData(dayIdx);
+            if (histDay) {
+                historyRouteUrl = buildRouteUrlForDay(histDay);
+                document.getElementById('route-compare-toggle').classList.remove('hidden');
+                switchRouteVersion('current');
+            } else {
+                historyRouteUrl = '';
+                document.getElementById('route-compare-toggle').classList.add('hidden');
+                document.getElementById('route-iframe').src = toGoogleMapsEmbedUrl(url);
+            }
             document.getElementById('route-iframe-panel').classList.remove('hidden');
         }
     }
@@ -2888,6 +2940,7 @@ OUTPUT FORMAT
         const opt = AIState.currentOptions[idx];
         const day = State.tripState.days.find(d => d.id === AIState.currentDayIndex);
         if(!day) return;
+        saveToHistory();
         day.options.push({ id: generateId('c_opt'), t: opt.t, en_t: opt.en_t, d: opt.d, u: opt.u });
         renderApp(); syncToCloud();
         btn.innerText = "✅ הוסף"; btn.disabled = true; btn.classList.add('opacity-50');
@@ -2896,6 +2949,7 @@ OUTPUT FORMAT
     function saveHotelSuggestion(dayId, hotelName) {
         const day = State.tripState.days.find(d => d.id === dayId);
         if(day) {
+            saveToHistory();
             day.stay = hotelName;
             renderApp(); syncToCloud();
             closeAIPanel();
@@ -3304,6 +3358,7 @@ OUTPUT FORMAT
         handleRouteAction,
         closeRouteIframe,
         openRouteInNewTab,
+        switchRouteVersion,
         openMultiDayPlannerModal,
         runMultiDayAI,
         openReplanModal,
