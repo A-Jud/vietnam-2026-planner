@@ -60,7 +60,16 @@
 <div id="app-container">
     <div id="map-container">
         <div id="map"></div>
-        
+
+        <!-- Route iframe panel -->
+        <div id="route-iframe-panel" class="hidden absolute inset-0 z-[500] bg-white flex flex-col">
+            <div class="flex items-center justify-between px-4 py-2 bg-indigo-600 text-white shrink-0">
+                <span class="text-sm font-bold">🗺️ מסלול ניווט יומי</span>
+                <button onclick="App.closeRouteIframe()" class="text-white hover:bg-indigo-700 px-3 py-1 rounded-lg text-xs font-bold transition-colors">✕ סגור</button>
+            </div>
+            <iframe id="route-iframe" class="flex-1 w-full border-none" src="" allowfullscreen></iframe>
+        </div>
+
         <!-- Comparison Map Overlay -->
         <div id="map-compare-overlay" class="hidden absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm p-3.5 rounded-2xl shadow-xl border border-gray-200 text-right pointer-events-auto min-w-[160px]">
             <h4 id="map-compare-title" class="text-xs font-bold text-gray-800 mb-3 flex items-center gap-1.5"><svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg> השוואת מסלולים</h4>
@@ -618,7 +627,7 @@
                 <button onclick="App.resetPrompts()" class="text-[10px] text-gray-500 hover:text-indigo-600 mt-2 font-bold">שחזר פרומפטים לברירת מחדל</button>
             </div>
             
-            <div id="config-tools" class="hidden">
+<div id="config-tools" class="hidden">
                 <div class="mb-5 pb-5 border-b border-gray-200">
                     <p class="text-sm font-bold text-gray-800 mb-1">הצפנת מפתח לקוד (Fallback)</p>
                     <p class="text-[10px] text-gray-500 mb-3 leading-relaxed">כלי זה מיועד להצפנת מפתח כדי להטמיע אותו ישירות בקוד המקור תחת המשתנה FALLBACK_OAI_KEY. זה לא שומר את המפתח לשימוש מיידי באפליקציה. להזנת מפתח לשימוש, עבור ללשוניות הספקים (OpenAI/Gemini).</p>
@@ -666,7 +675,7 @@
     // 📁 src/config/constants.js
     // ==========================================
     const Config = {
-        CLIENT_ID: "YOUR_GOOGLE_CLIENT_ID_HERE", // Replaced dummy with placeholder
+        CLIENT_ID: "449350453148-rptakuolagf5deu5rn8u9ep1o76lmqj4.apps.googleusercontent.com",
         SCOPES: "https://www.googleapis.com/auth/drive.file", 
         FALLBACK_OAI_KEY: "YOUR_LIMITED_OPENAI_KEY_HERE",
         FOLDER_NAME: "My Trip Planner",
@@ -1537,7 +1546,7 @@ OUTPUT FORMAT
         reader.readAsText(file);
     }
 
-    window.initGIS = function() {
+    function initGIS() {
         if(typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
             window.tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: Config.CLIENT_ID, scope: Config.SCOPES, callback: async (tokenResponse) => {
@@ -1553,10 +1562,11 @@ OUTPUT FORMAT
         const syncEl = document.getElementById('sync-status');
         if (Config.CLIENT_ID === "YOUR_GOOGLE_CLIENT_ID_HERE") syncEl.innerText = '⚠️ מקומי בלבד';
         else { syncEl.innerText = '⏳ מתחבר...'; document.getElementById('auth-btn').classList.remove('hidden'); }
-        
+
         const localData = JSON.parse(localStorage.getItem('trip_local_data_v1') || "{}");
         migrateAndApplyState(localData);
-    };
+    }
+    window.initGIS = initGIS;
 
     function loginGoogle() { if (Config.CLIENT_ID && Config.CLIENT_ID !== "YOUR_GOOGLE_CLIENT_ID_HERE" && window.tokenClient) window.tokenClient.requestAccessToken(); }
     function logoutGoogle() { DriveState.accessToken = DriveState.folderId = DriveState.fileId = null; document.getElementById('sync-status').innerText = '⚠️ מנותק'; document.getElementById('auth-btn').innerText = 'גיבוי בענן'; document.getElementById('auth-btn').onclick = loginGoogle; }
@@ -1901,6 +1911,11 @@ OUTPUT FORMAT
     function closeIframe() { document.getElementById('iframe-wrapper').classList.add('hidden'); document.getElementById('content-iframe').src = ''; }
     function openCurrentInNewTab() { if(currentIframeUrl) window.open(currentIframeUrl, '_blank'); }
     function openInIframe(url) {
+        if (!url) return;
+        if (url.includes('google.com') || url.includes('goo.gl')) {
+            window.open(url, '_blank');
+            return;
+        }
         currentIframeUrl = url;
         document.getElementById('content-iframe').src = url;
         document.getElementById('iframe-wrapper').classList.remove('hidden');
@@ -2659,11 +2674,35 @@ OUTPUT FORMAT
         document.getElementById('route-modal').classList.remove('hidden');
     }
 
+    function toGoogleMapsEmbedUrl(dirUrl) {
+        try {
+            const u = new URL(dirUrl);
+            const origin = u.searchParams.get('origin') || '';
+            const destination = u.searchParams.get('destination') || '';
+            const waypoints = u.searchParams.get('waypoints') || '';
+            const daddr = waypoints
+                ? waypoints.split('|').map(w => encodeURIComponent(w)).join('+to:') + '+to:' + encodeURIComponent(destination)
+                : encodeURIComponent(destination);
+            return `https://maps.google.com/maps?saddr=${encodeURIComponent(origin)}&daddr=${daddr}&output=embed`;
+        } catch(e) { return dirUrl; }
+    }
+
+    function closeRouteIframe() {
+        document.getElementById('route-iframe-panel').classList.add('hidden');
+        document.getElementById('route-iframe').src = '';
+    }
+
     async function handleRouteAction(action) {
         const url = document.getElementById('route-modal-url').value;
         document.getElementById('route-modal').classList.add('hidden');
-        if (action === 'browser') { try{ const t=document.createElement("textarea"); t.value=url; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }catch(e){} window.open(url, '_blank'); }
-        else if (action === 'iframe') openInIframe(url);
+        if (action === 'browser') {
+            try { navigator.clipboard.writeText(url); } catch(e) {}
+            window.open(url, '_blank');
+        } else if (action === 'iframe') {
+            const embedUrl = toGoogleMapsEmbedUrl(url);
+            document.getElementById('route-iframe').src = embedUrl;
+            document.getElementById('route-iframe-panel').classList.remove('hidden');
+        }
     }
     
     async function openAIGuide(dayId, mode) {
@@ -3234,6 +3273,7 @@ OUTPUT FORMAT
         openAIGuide,
         openRouteModal,
         handleRouteAction,
+        closeRouteIframe,
         openMultiDayPlannerModal,
         runMultiDayAI,
         openReplanModal,
@@ -3242,8 +3282,8 @@ OUTPUT FORMAT
         saveHotelSuggestion
     };
 
-    // Attach init functions to window so the external Google script can call it
-    window.initGIS = initGIS;
+    // If GIS script already loaded before this module ran, call initGIS now
+    if (typeof google !== 'undefined' && google.accounts) initGIS();
 
     // Resizer Logic
     let rsz = false; 
