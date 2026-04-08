@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org; connect-src 'self' https://generativelanguage.googleapis.com https://api.openai.com https://www.googleapis.com https://nominatim.openstreetmap.org; frame-src https://maps.google.com https://www.google.com;">
     <title>מתכנן טיולים חכם</title>
     
     <!-- Leaflet CSS -->
@@ -67,7 +68,7 @@
                 <span class="text-sm font-bold">🗺️ מסלול ניווט יומי</span>
                 <button onclick="App.closeRouteIframe()" class="text-white hover:bg-indigo-700 px-3 py-1 rounded-lg text-xs font-bold transition-colors">✕ סגור</button>
             </div>
-            <iframe id="route-iframe" class="flex-1 w-full border-none" src="" allowfullscreen></iframe>
+            <iframe id="route-iframe" class="flex-1 w-full border-none" src="" sandbox="allow-scripts allow-same-origin allow-popups" allowfullscreen></iframe>
         </div>
 
         <!-- Comparison Map Overlay -->
@@ -95,7 +96,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                 </button>
             </div>
-            <iframe id="content-iframe" class="flex-1 w-full h-full border-none bg-gray-50" src=""></iframe>
+            <iframe id="content-iframe" class="flex-1 w-full h-full border-none bg-gray-50" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
         </div>
     </div>
     
@@ -1799,11 +1800,15 @@ OUTPUT FORMAT
         if(!key) { App.openApiModal(); throw new Error("No API Key"); }
 
         if(prov === 'gemini') {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${key}`, { method:'POST', body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: sys }] }, generationConfig: { responseMimeType: "application/json" } }) });
-            const d = await res.json(); if(!res.ok) throw d; return JSON.parse(d.candidates[0].content.parts[0].text);
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent`, { method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key}, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: sys }] }, generationConfig: { responseMimeType: "application/json" } }) });
+            const d = await res.json(); if(!res.ok) throw d;
+            try { return JSON.parse(d.candidates[0].content.parts[0].text); }
+            catch(e) { throw new Error("AI returned invalid JSON: " + (d.candidates?.[0]?.content?.parts?.[0]?.text || "empty response").slice(0, 200)); }
         } else {
             const res = await fetch(`https://api.openai.com/v1/chat/completions`, { method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({ model:mod, messages:[{role:"system",content:sys}, {role:"user",content:prompt}], response_format:{type:"json_object"} }) });
-            const d = await res.json(); if(!res.ok) throw d; return JSON.parse(d.choices[0].message.content);
+            const d = await res.json(); if(!res.ok) throw d;
+            try { return JSON.parse(d.choices[0].message.content); }
+            catch(e) { throw new Error("AI returned invalid JSON: " + (d.choices?.[0]?.message?.content || "empty response").slice(0, 200)); }
         }
     }
 
@@ -1823,7 +1828,7 @@ OUTPUT FORMAT
         try {
             let res, d;
             if(prov==='gemini'){
-                res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent?key=${key}`, { method:'POST', body: JSON.stringify({ contents: [{ parts: [{ text: "hi" }] }] }) });
+                res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent`, { method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key}, body: JSON.stringify({ contents: [{ parts: [{ text: "hi" }] }] }) });
             } else {
                 res = await fetch(`https://api.openai.com/v1/chat/completions`, { method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({ model:mod, messages:[{role:"user",content:"hi"}], max_completion_tokens:5 }) });
             }
