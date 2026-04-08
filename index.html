@@ -66,9 +66,12 @@
         <div id="route-iframe-panel" class="hidden absolute inset-0 z-[500] bg-white flex flex-col">
             <div class="flex items-center justify-between px-4 py-2 bg-indigo-600 text-white shrink-0">
                 <span class="text-sm font-bold">🗺️ מסלול ניווט יומי</span>
-                <button onclick="App.closeRouteIframe()" class="text-white hover:bg-indigo-700 px-3 py-1 rounded-lg text-xs font-bold transition-colors">✕ סגור</button>
+                <div class="flex items-center gap-2">
+                    <button onclick="App.openRouteInNewTab()" class="bg-indigo-500 hover:bg-indigo-400 px-3 py-1 rounded-lg text-xs font-bold transition-colors">פתח ב-Google Maps ↗</button>
+                    <button onclick="App.closeRouteIframe()" class="text-white hover:bg-indigo-700 px-3 py-1 rounded-lg text-xs font-bold transition-colors">✕ סגור</button>
+                </div>
             </div>
-            <iframe id="route-iframe" class="flex-1 w-full border-none" src="" sandbox="allow-scripts allow-same-origin allow-popups" allowfullscreen></iframe>
+            <iframe id="route-iframe" class="flex-1 w-full border-none" src="" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" allowfullscreen></iframe>
         </div>
 
         <!-- Comparison Map Overlay -->
@@ -686,6 +689,8 @@
 
     // HTML escaping helper — prevents XSS when interpolating into innerHTML
     function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+    // Escape for use inside single-quoted onclick attribute strings
+    function escAttr(s) { if (!s) return ''; return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/`/g, '\\`'); }
 
     // ==========================================
     // 📁 src/config/prompts.js
@@ -1538,6 +1543,13 @@ OUTPUT FORMAT
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
+                // Validate imported data has expected structure
+                if (data.allTrips && !Array.isArray(data.allTrips)) throw new Error("Invalid format: allTrips must be an array");
+                if (data.allTrips) {
+                    for (const trip of data.allTrips) {
+                        if (!trip.days || !Array.isArray(trip.days)) throw new Error("Invalid format: each trip must have a days array");
+                    }
+                }
                 migrateAndApplyState(data);
                 syncToCloud();
                 showAlert("הצלחה", "הנתונים יובאו בהצלחה!");
@@ -1545,7 +1557,7 @@ OUTPUT FORMAT
             } catch (err) {
                 showAlert("שגיאה", "שגיאה בפענוח הקובץ: " + err.message);
             }
-            event.target.value = ""; 
+            event.target.value = "";
         };
         reader.readAsText(file);
     }
@@ -1920,6 +1932,7 @@ OUTPUT FORMAT
     function openCurrentInNewTab() { if(currentIframeUrl) window.open(currentIframeUrl, '_blank'); }
     function openInIframe(url) {
         if (!url) return;
+        if (!/^https?:\/\//i.test(url)) return;
         if (url.includes('google.com') || url.includes('goo.gl')) {
             window.open(url, '_blank');
             return;
@@ -2695,9 +2708,16 @@ OUTPUT FORMAT
         } catch(e) { return dirUrl; }
     }
 
+    let currentRouteUrl = '';
+
     function closeRouteIframe() {
         document.getElementById('route-iframe-panel').classList.add('hidden');
         document.getElementById('route-iframe').src = '';
+        currentRouteUrl = '';
+    }
+
+    function openRouteInNewTab() {
+        if (currentRouteUrl) window.open(currentRouteUrl, '_blank');
     }
 
     async function handleRouteAction(action) {
@@ -2707,6 +2727,7 @@ OUTPUT FORMAT
             try { navigator.clipboard.writeText(url); } catch(e) {}
             window.open(url, '_blank');
         } else if (action === 'iframe') {
+            currentRouteUrl = url;
             const embedUrl = toGoogleMapsEmbedUrl(url);
             document.getElementById('route-iframe').src = embedUrl;
             document.getElementById('route-iframe-panel').classList.remove('hidden');
@@ -2748,7 +2769,7 @@ OUTPUT FORMAT
                         <h5 class="font-bold text-sm mb-1">${esc(o.t)} <span class="text-[10px] text-gray-500 font-normal dir-ltr inline-block">(${esc(o.en_t)})</span></h5>
                         <p class="text-xs text-gray-600 mb-3">${esc(o.d)}</p>
                         <div class="flex flex-row-reverse justify-between items-center">
-                            ${o.u ? `<button onclick="App.openInIframe('${(o.u || '').replace(/'/g, "\\'")}')" class="text-teal-600 text-[10px] font-bold underline">מפה/אתר</button>` : '<span></span>'}
+                            ${o.u ? `<button onclick="App.openInIframe('${escAttr(o.u)}')" class="text-teal-600 text-[10px] font-bold underline">מפה/אתר</button>` : '<span></span>'}
                             <button onclick="App.saveGeneratedOption(${i}, this)" class="bg-teal-50 text-teal-700 px-3 py-1.5 rounded-full text-[10px] font-bold shadow-sm">➕ הוסף כאפשרות</button>
                         </div>
                     </div>`).join('');
@@ -2817,7 +2838,7 @@ OUTPUT FORMAT
                             <span class="font-bold text-orange-900 text-sm">${esc(t.emoji)} ${esc(t.title)} <span class="text-[10px] text-gray-500 font-normal dir-ltr inline-block">(${esc(t.en_title)})</span></span>
                             <div class="flex items-center gap-2">
                                 ${t.menu_url ? `<a href="${t.menu_url}" target="_blank" class="text-orange-600 font-bold underline hover:text-orange-800 px-2 text-xs">תפריט</a>` : ''}
-                                <button onclick="App.openInIframe('${t.url.replace(/'/g, "\\'")}')" class="text-orange-700 font-bold underline hover:text-orange-900 px-2 text-xs">מפה</button>
+                                <button onclick="App.openInIframe('${escAttr(t.url)}')" class="text-orange-700 font-bold underline hover:text-orange-900 px-2 text-xs">מפה</button>
                                 <button onclick="App.saveTip(${i}, this)" class="bg-orange-100 text-orange-800 px-3 py-1.5 rounded-full text-[10px] font-bold hover:bg-orange-200">⭐ שמור כטיפ</button>
                             </div>
                         </div>
@@ -2828,14 +2849,14 @@ OUTPUT FORMAT
                 const hotels = result.hotels || [];
                 AIState.currentDayIndex = dayId;
                 document.getElementById('ai-results').innerHTML = `<h4 class="font-bold text-lg mb-4 text-pink-800">המלצות לינה - ${esc(day.enLoc || day.title)}</h4>` + hotels.map((h, i) => {
-                    const safeUrl = sanitizeMapUrl(h.url, h.en_name || h.name, day.enLoc).replace(/'/g, "\\'");
+                    const safeUrl = escAttr(sanitizeMapUrl(h.url, h.en_name || h.name, day.enLoc));
                     return `
                     <div class="bg-pink-50 border border-pink-200 p-4 rounded-xl mt-3 shadow-sm text-right">
                         <h5 class="font-bold text-pink-900 text-sm mb-1">🏨 ${esc(h.name)} <span class="text-[10px] text-gray-500 font-normal dir-ltr inline-block">(${esc(h.en_name)})</span></h5>
                         <p class="text-xs text-gray-600 leading-relaxed mb-3">${esc(h.desc)}</p>
                         <div class="flex flex-row-reverse justify-between items-center">
                             <button onclick="App.openInIframe('${safeUrl}')" class="text-pink-700 font-bold underline hover:text-pink-900 text-xs px-2">בדוק במפה</button>
-                            <button onclick="App.saveHotelSuggestion('${day.id}', '${(h.name || '').replace(/'/g, "\\'")}')" class="bg-pink-100 text-pink-800 px-3 py-1.5 rounded-full text-[10px] font-bold hover:bg-pink-200">✅ קבע כמלון שלי</button>
+                            <button onclick="App.saveHotelSuggestion('${day.id}', '${escAttr(h.name)}')" class="bg-pink-100 text-pink-800 px-3 py-1.5 rounded-full text-[10px] font-bold hover:bg-pink-200">✅ קבע כמלון שלי</button>
                         </div>
                     </div>`;
                 }).join('');
@@ -2851,7 +2872,7 @@ OUTPUT FORMAT
                                 <h5 class="font-bold text-sm mb-1">${esc(t.title)} <span class="text-[10px] text-gray-500 font-normal dir-ltr inline-block">(${esc(t.en_title)})</span></h5>
                                 <p class="text-xs text-gray-600 mb-3">${esc(t.text)}</p>
                                 <div class="flex flex-row-reverse justify-between items-center">
-                                    <button onclick="App.openInIframe('${t.url.replace(/'/g, "\\'")}')" class="text-indigo-600 text-[10px] font-bold underline">מפה</button>
+                                    <button onclick="App.openInIframe('${escAttr(t.url)}')" class="text-indigo-600 text-[10px] font-bold underline">מפה</button>
                                     <button onclick="App.saveTip(${i}, this)" class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-bold">⭐ שמור טיפ</button>
                                 </div>
                             </div>
@@ -3070,7 +3091,7 @@ OUTPUT FORMAT
                     ${day.stay ? `
                     <div class="bg-pink-50 text-pink-800 p-2.5 rounded-lg mb-4 text-xs flex justify-between items-center border border-pink-100">
                         <div class="flex items-center gap-2"><span class="text-sm">🏨</span> <b>לינה:</b> ${esc(day.stay)}</div>
-                        <button onclick="App.searchLocationStr('maps', '', '', '${day.stay.replace(/'/g, "\\'")}')" class="text-pink-600 hover:bg-pink-100 p-1.5 rounded-md transition-colors" title="חפש במפות"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></button>
+                        <button onclick="App.searchLocationStr('maps', '', '', '${escAttr(day.stay)}')" class="text-pink-600 hover:bg-pink-100 p-1.5 rounded-md transition-colors" title="חפש במפות"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></button>
                     </div>` : ''}
 
                     <!-- Main Links -->
@@ -3082,7 +3103,7 @@ OUTPUT FORMAT
                             <div class="bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-2 group relative pr-3">
                                 <div class="absolute right-0 top-0 h-full w-1 bg-indigo-400 rounded-r-lg"></div>
                                 <span class="font-bold text-gray-700">${esc(l.t)}</span>
-                                <button onclick="App.openInIframe('${(l.u || '').replace(/'/g, "\\'")}')" class="text-indigo-500 hover:text-indigo-700" title="פתח מפה"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></button>
+                                <button onclick="App.openInIframe('${escAttr(l.u)}')" class="text-indigo-500 hover:text-indigo-700" title="פתח מפה"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></button>
                                 <button onclick="App.openRelocateModal('${day.id}', 'link', ${lIdx})" class="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="העבר ליום אחר"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></button>
                             </div>
                             `).join('')}
@@ -3109,7 +3130,7 @@ OUTPUT FORMAT
                                         <div class="flex justify-between items-start">
                                             <div class="font-bold text-sm text-gray-800">${esc(opt.t)} <span class="text-[10px] text-gray-400 font-normal dir-ltr inline-block">(${esc(opt.en_t)})</span></div>
                                             <div class="flex gap-1.5 opacity-0 group-hover:opacity-100" style="opacity: 1;"> <!-- Fixed visibility for touch -->
-                                                ${opt.u ? `<button onclick="event.stopPropagation(); App.openInIframe('${(opt.u||'').replace(/'/g, "\\'")}')" class="text-indigo-400 hover:text-indigo-700 p-1" title="מפה"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg></button>` : ''}
+                                                ${opt.u ? `<button onclick="event.stopPropagation(); App.openInIframe('${escAttr(opt.u)}')" class="text-indigo-400 hover:text-indigo-700 p-1" title="מפה"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg></button>` : ''}
                                                 <button onclick="event.stopPropagation(); App.openEditOption('${day.id}', ${oIdx})" class="text-gray-400 hover:text-indigo-600 p-1" title="ערוך"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
                                                 <button onclick="event.stopPropagation(); App.openRelocateModal('${day.id}', 'option', ${oIdx})" class="text-gray-400 hover:text-indigo-600 p-1" title="העבר"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></button>
                                                 <button onclick="event.stopPropagation(); App.deleteOption('${day.id}', ${oIdx})" class="text-gray-400 hover:text-red-500 p-1" title="מחק"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
@@ -3135,7 +3156,7 @@ OUTPUT FORMAT
                                         <div class="font-bold text-orange-900 text-xs">${esc(t.title)} <span class="text-[10px] text-gray-400 font-normal dir-ltr inline-block">(${esc(t.en_title)})</span></div>
                                         <p class="text-[11px] text-gray-600 mt-0.5 leading-relaxed whitespace-pre-line">${esc(t.text)}</p>
                                         <div class="flex gap-2 mt-1.5">
-                                            ${t.url ? `<button onclick="App.openInIframe('${(t.url||'').replace(/'/g, "\\'")}')" class="text-[10px] text-orange-600 font-bold underline">פתח מפה</button>` : ''}
+                                            ${t.url ? `<button onclick="App.openInIframe('${escAttr(t.url)}')" class="text-[10px] text-orange-600 font-bold underline">פתח מפה</button>` : ''}
                                             ${t.menu_url ? `<a href="${t.menu_url}" target="_blank" class="text-[10px] text-orange-600 font-bold underline">תפריט/אתר</a>` : ''}
                                         </div>
                                     </div>
@@ -3282,6 +3303,7 @@ OUTPUT FORMAT
         openRouteModal,
         handleRouteAction,
         closeRouteIframe,
+        openRouteInNewTab,
         openMultiDayPlannerModal,
         runMultiDayAI,
         openReplanModal,
