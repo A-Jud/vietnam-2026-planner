@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org; connect-src 'self' https://generativelanguage.googleapis.com https://api.openai.com https://www.googleapis.com https://nominatim.openstreetmap.org; frame-src https://maps.google.com https://www.google.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org; connect-src 'self' https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://www.googleapis.com https://nominatim.openstreetmap.org; frame-src https://maps.google.com https://www.google.com;">
     <title>מתכנן טיולים חכם</title>
     
     <!-- Leaflet CSS -->
@@ -571,6 +571,7 @@
             <button onclick="App.switchAdminTab('guide')" id="tab-guide" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-indigo-600 border-indigo-600 bg-indigo-50 transition-all">איך להשתמש</button>
             <button onclick="App.switchAdminTab('gemini')" id="tab-gemini" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">Gemini</button>
             <button onclick="App.switchAdminTab('openai')" id="tab-openai" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">OpenAI</button>
+            <button onclick="App.switchAdminTab('claude')" id="tab-claude" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">Claude</button>
             <button onclick="App.switchAdminTab('prompts')" id="tab-prompts" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">פרומפטים</button>
             <button onclick="App.switchAdminTab('tools')" id="tab-tools" class="whitespace-nowrap flex-1 px-3 py-3.5 font-bold border-b-2 text-gray-500 border-transparent hover:bg-gray-100 transition-all">כלים</button>
         </div>
@@ -598,16 +599,32 @@
             <div id="config-gemini" class="hidden">
                 <input type="password" id="gemini-key-input" placeholder="AIzaSy..." class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none rounded-xl px-4 py-2.5 text-sm mb-3 font-mono text-left" dir="ltr">
                 <select id="gemini-model-select" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 mb-3">
-                    <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (מומלץ)</option>
+                    <option value="gemini-2.5-pro-preview-05-06">Gemini 2.5 Pro (מומלץ)</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                    <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash</option>
                     <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro</option>
                 </select>
             </div>
-            
+
             <div id="config-openai" class="hidden">
                 <input type="password" id="openai-key-input" placeholder="sk-..." class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none rounded-xl px-4 py-2.5 text-sm mb-3 font-mono text-left" dir="ltr">
                 <select id="openai-model-select" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 mb-3">
+                    <option value="gpt-5.4">GPT-5.4 (מומלץ)</option>
+                    <option value="gpt-5.3">GPT-5.3</option>
+                    <option value="gpt-4.1">GPT-4.1</option>
+                    <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                    <option value="o4-mini">o4-mini (Reasoning)</option>
                     <option value="gpt-4o">GPT-4o</option>
                     <option value="gpt-4o-mini">GPT-4o Mini</option>
+                </select>
+            </div>
+
+            <div id="config-claude" class="hidden">
+                <input type="password" id="claude-key-input" placeholder="sk-ant-..." class="w-full border-2 border-gray-200 focus:border-indigo-500 outline-none rounded-xl px-4 py-2.5 text-sm mb-3 font-mono text-left" dir="ltr">
+                <select id="claude-model-select" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 mb-3">
+                    <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (מומלץ)</option>
+                    <option value="claude-opus-4-6">Claude Opus 4.6</option>
+                    <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
                 </select>
             </div>
             
@@ -660,7 +677,7 @@
 
             <div id="provider-selector-box" class="bg-indigo-50 p-3 rounded-xl my-4 flex items-center justify-between flex-row-reverse border border-indigo-100">
                 <span class="text-xs font-bold text-indigo-900">ספק פעיל:</span>
-                <select id="active-provider-select" class="bg-white border border-indigo-200 rounded-lg px-2 py-1 text-xs font-bold text-indigo-600 outline-none"><option value="gemini">Gemini</option><option value="openai">OpenAI</option></select>
+                <select id="active-provider-select" class="bg-white border border-indigo-200 rounded-lg px-2 py-1 text-xs font-bold text-indigo-600 outline-none"><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="claude">Claude</option></select>
             </div>
             <div id="test-key-result" class="hidden mb-3 p-2.5 rounded-xl text-xs font-bold text-center"></div>
 
@@ -1806,16 +1823,20 @@ OUTPUT FORMAT
         const dStr = localStorage.getItem('trip_crypto_config_v1') || "{}";
         const dConf = JSON.parse(dStr);
         let prov = dConf.activeProvider || "openai";
-        let mod = prov === 'gemini' ? (dConf.gemMod || "gemini-1.5-flash-latest") : (dConf.oaiMod || "gpt-4o-mini");
-        
+        let mod;
+        if (prov === 'gemini') mod = dConf.gemMod || "gemini-2.0-flash";
+        else if (prov === 'claude') mod = dConf.claudeMod || "claude-sonnet-4-6";
+        else mod = dConf.oaiMod || "gpt-5.4";
+
         let key = "";
         if(prov === 'gemini') key = await decryptString(dConf.gemKeyEncrypted);
+        else if(prov === 'claude') key = await decryptString(dConf.claudeKeyEncrypted);
         else key = await decryptString(dConf.oaiKeyEncrypted);
 
-        if(!key && Config.FALLBACK_OAI_KEY !== "YOUR_LIMITED_OPENAI_KEY_HERE") { 
-            prov = 'openai'; 
-            mod = 'gpt-4o-mini'; 
-            key = Config.FALLBACK_OAI_KEY.startsWith("ENC") ? await decryptString(Config.FALLBACK_OAI_KEY) : Config.FALLBACK_OAI_KEY; 
+        if(!key && Config.FALLBACK_OAI_KEY !== "YOUR_LIMITED_OPENAI_KEY_HERE") {
+            prov = 'openai';
+            mod = 'gpt-5.4';
+            key = Config.FALLBACK_OAI_KEY.startsWith("ENC") ? await decryptString(Config.FALLBACK_OAI_KEY) : Config.FALLBACK_OAI_KEY;
         }
         if(!key) { App.openApiModal(); throw new Error("No API Key"); }
 
@@ -1824,6 +1845,11 @@ OUTPUT FORMAT
             const d = await res.json(); if(!res.ok) throw d;
             try { return JSON.parse(d.candidates[0].content.parts[0].text); }
             catch(e) { throw new Error("AI returned invalid JSON: " + (d.candidates?.[0]?.content?.parts?.[0]?.text || "empty response").slice(0, 200)); }
+        } else if(prov === 'claude') {
+            const res = await fetch(`https://api.anthropic.com/v1/messages`, { method:'POST', headers:{'x-api-key':key,'anthropic-version':'2023-06-01','Content-Type':'application/json'}, body: JSON.stringify({ model:mod, max_tokens:4096, system: sys + "\n\nRespond with valid JSON only. No markdown, no explanation.", messages:[{role:"user",content:prompt}] }) });
+            const d = await res.json(); if(!res.ok) throw d;
+            try { return JSON.parse(d.content[0].text); }
+            catch(e) { throw new Error("AI returned invalid JSON: " + (d.content?.[0]?.text || "empty response").slice(0, 200)); }
         } else {
             const res = await fetch(`https://api.openai.com/v1/chat/completions`, { method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({ model:mod, messages:[{role:"system",content:sys}, {role:"user",content:prompt}], response_format:{type:"json_object"} }) });
             const d = await res.json(); if(!res.ok) throw d;
@@ -1849,6 +1875,8 @@ OUTPUT FORMAT
             let res, d;
             if(prov==='gemini'){
                 res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${mod}:generateContent`, { method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key}, body: JSON.stringify({ contents: [{ parts: [{ text: "hi" }] }] }) });
+            } else if(prov==='claude') {
+                res = await fetch(`https://api.anthropic.com/v1/messages`, { method:'POST', headers:{'x-api-key':key,'anthropic-version':'2023-06-01','Content-Type':'application/json'}, body: JSON.stringify({ model:mod, max_tokens:5, messages:[{role:"user",content:"hi"}] }) });
             } else {
                 res = await fetch(`https://api.openai.com/v1/chat/completions`, { method:'POST', headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'}, body: JSON.stringify({ model:mod, messages:[{role:"user",content:"hi"}], max_completion_tokens:5 }) });
             }
@@ -1863,8 +1891,8 @@ OUTPUT FORMAT
     // 📁 src/ui/actions.js
     // ==========================================
     function switchAdminTab(tab) {
-        ['config-guide', 'config-gemini', 'config-openai', 'config-prompts', 'config-tools'].forEach(id => document.getElementById(id).classList.add('hidden'));
-        ['tab-guide', 'tab-gemini', 'tab-openai', 'tab-prompts', 'tab-tools'].forEach(id => {
+        ['config-guide', 'config-gemini', 'config-openai', 'config-claude', 'config-prompts', 'config-tools'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        ['tab-guide', 'tab-gemini', 'tab-openai', 'tab-claude', 'tab-prompts', 'tab-tools'].forEach(id => {
             const el = document.getElementById(id);
             el.classList.remove('active', 'text-indigo-600', 'border-indigo-600', 'bg-indigo-50');
             el.classList.add('text-gray-500', 'border-transparent');
@@ -1873,7 +1901,7 @@ OUTPUT FORMAT
         const activeTab = document.getElementById('tab-' + tab);
         activeTab.classList.remove('text-gray-500', 'border-transparent');
         activeTab.classList.add('active', 'text-indigo-600', 'border-indigo-600', 'bg-indigo-50');
-        const isApiTab = tab === 'gemini' || tab === 'openai';
+        const isApiTab = tab === 'gemini' || tab === 'openai' || tab === 'claude';
         document.getElementById('provider-selector-box').style.display = isApiTab ? 'flex' : 'none';
         document.getElementById('btn-test-key').style.display = isApiTab ? 'block' : 'none';
         document.getElementById('test-key-result').classList.add('hidden');
@@ -1892,13 +1920,17 @@ OUTPUT FORMAT
     async function saveAllConfig() {
         const rawGemKey = document.getElementById('gemini-key-input').value.trim();
         const rawOaiKey = document.getElementById('openai-key-input').value.trim();
+        const rawClaudeKey = document.getElementById('claude-key-input').value.trim();
         const encGemKey = await encryptString(rawGemKey);
         const encOaiKey = await encryptString(rawOaiKey);
+        const encClaudeKey = await encryptString(rawClaudeKey);
         const configs = {
             gemKeyEncrypted: encGemKey,
             gemMod: document.getElementById('gemini-model-select').value,
             oaiKeyEncrypted: encOaiKey,
             oaiMod: document.getElementById('openai-model-select').value,
+            claudeKeyEncrypted: encClaudeKey,
+            claudeMod: document.getElementById('claude-model-select').value,
             activeProvider: document.getElementById('active-provider-select').value
         };
         localStorage.setItem('trip_crypto_config_v1', JSON.stringify(configs));
@@ -1920,8 +1952,10 @@ OUTPUT FORMAT
         const d = JSON.parse(localStorage.getItem('trip_crypto_config_v1') || "{}");
         if(d.gemKeyEncrypted) document.getElementById('gemini-key-input').value = await decryptString(d.gemKeyEncrypted);
         if(d.oaiKeyEncrypted) document.getElementById('openai-key-input').value = await decryptString(d.oaiKeyEncrypted);
+        if(d.claudeKeyEncrypted) document.getElementById('claude-key-input').value = await decryptString(d.claudeKeyEncrypted);
         if(d.gemMod) document.getElementById('gemini-model-select').value = d.gemMod;
         if(d.oaiMod) document.getElementById('openai-model-select').value = d.oaiMod;
+        if(d.claudeMod) document.getElementById('claude-model-select').value = d.claudeMod;
         if(d.activeProvider) document.getElementById('active-provider-select').value = d.activeProvider;
         
         document.getElementById('prompt-tips-input').value = State.customPrompts?.tips || Prompts.tips;
@@ -2992,7 +3026,7 @@ OUTPUT FORMAT
             
             const newDays = res.days.map(d => ({
                 id: generateId('ai_day'), title: d.title, enLoc: d.enLoc, desc: d.desc, stay: d.stay || "",
-                mainLinks: (d.mainLinks || []).map(l => ({...l, u: sanitizeMapUrl(l.u, l.t, d.enLoc)})), 
+                mainLinks: (d.mainLinks || []).map(l => { const t = l.t || l.name || l.title || ''; const u = sanitizeMapUrl(l.u || l.url, t, d.enLoc); return { t, u }; }),
                 options: (d.options||[]).map(o=>({...o, id:generateId('o'), u: sanitizeMapUrl(o.u, o.en_t || o.t, d.enLoc)})), 
                 selectedOptions: [], tips: [], providers: [], transport: null
             }));
@@ -3063,7 +3097,7 @@ OUTPUT FORMAT
             
             day.title = res.day.title || day.title;
             day.desc = res.day.desc || day.desc;
-            day.mainLinks = (res.day.mainLinks || []).map(l => ({...l, u: sanitizeMapUrl(l.u, l.t, day.enLoc)}));
+            day.mainLinks = (res.day.mainLinks || []).map(l => { const t = l.t || l.name || l.title || ''; const u = sanitizeMapUrl(l.u || l.url, t, day.enLoc); return { t, u }; });
             day.options = (res.day.options||[]).map(o=>({...o, id:generateId('o'), u: sanitizeMapUrl(o.u, o.en_t || o.t, day.enLoc)}));
             day.selectedOptions = []; 
             
@@ -3156,7 +3190,7 @@ OUTPUT FORMAT
                             ${day.mainLinks.map((l, lIdx) => `
                             <div class="bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-2 group relative pr-3">
                                 <div class="absolute right-0 top-0 h-full w-1 bg-indigo-400 rounded-r-lg"></div>
-                                <span class="font-bold text-gray-700">${esc(l.t)}</span>
+                                <span class="font-bold text-gray-700">${esc(l.t || (() => { try { return decodeURIComponent((l.u||'').split('query=')[1]?.split('&')[0]||'').replace(/\+/g,' '); } catch(e){ return ''; } })())}</span>
                                 <button onclick="App.openInIframe('${escAttr(l.u)}')" class="text-indigo-500 hover:text-indigo-700" title="פתח מפה"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></button>
                                 <button onclick="App.openRelocateModal('${day.id}', 'link', ${lIdx})" class="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" title="העבר ליום אחר"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></button>
                             </div>
