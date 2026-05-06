@@ -1,0 +1,5 @@
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Permissions-Policy: geolocation=(), camera=(), microphone=()
+  Content-Security-Policy: frame-ancestors 'self'
